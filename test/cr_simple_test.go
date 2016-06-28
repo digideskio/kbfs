@@ -884,6 +884,8 @@ func TestCrMergedRmdirTree(t *testing.T) {
 			disableUpdates(),
 		),
 		as(bob, noSync(),
+			// What if bob modified one of these files before deleting
+			// it, so alice didn't have a cached copy?
 			rm("a/b/d/f"),
 			rm("a/b/c/e"),
 			rmdir("a/b/d"),
