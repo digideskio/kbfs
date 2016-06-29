@@ -1039,8 +1039,14 @@ func (fbo *folderBranchOps) initMDLocked(
 func (fbo *folderBranchOps) GetOrCreateRootNode(
 	ctx context.Context, h *TlfHandle, branch BranchName) (
 	node Node, ei EntryInfo, err error) {
-	err = errors.New("GetOrCreateRootNode is not supported by " +
-		"folderBranchOps")
+	err = errors.New("GetOrCreateRootNode is not supported by folderBranchOps")
+	return
+}
+
+func (fbo *folderBranchOps) GetRootNode(
+	ctx context.Context, h *TlfHandle, branch BranchName) (
+	node Node, ei EntryInfo, err error) {
+	err = errors.New("GetRootNode is not supported by folderBranchOps")
 	return
 }
 
