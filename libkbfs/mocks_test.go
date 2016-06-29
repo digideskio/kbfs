@@ -247,6 +247,18 @@ func (_mr *_MockKBFSOpsRecorder) GetOrCreateRootNode(arg0, arg1, arg2 interface{
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetOrCreateRootNode", arg0, arg1, arg2)
 }
 
+func (_m *MockKBFSOps) GetRootNode(ctx context.Context, h *TlfHandle, branch BranchName) (Node, EntryInfo, error) {
+	ret := _m.ctrl.Call(_m, "GetRootNode", ctx, h, branch)
+	ret0, _ := ret[0].(Node)
+	ret1, _ := ret[1].(EntryInfo)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+func (_mr *_MockKBFSOpsRecorder) GetRootNode(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetRootNode", arg0, arg1, arg2)
+}
+
 func (_m *MockKBFSOps) GetDirChildren(ctx context.Context, dir Node) (map[string]EntryInfo, error) {
 	ret := _m.ctrl.Call(_m, "GetDirChildren", ctx, dir)
 	ret0, _ := ret[0].(map[string]EntryInfo)
