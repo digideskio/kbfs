@@ -53,7 +53,7 @@ type InitParams struct {
 	// LogFileConfig tells us where to log and rotation config.
 	LogFileConfig logger.LogFileConfig
 
-	// WriteJournaling, if true, turns on write journalling. Still
+	// WriteJournaling, if true, turns on write journaling. Still
 	// have to turn it on for each TLF, though.
 	WriteJournaling bool
 }
@@ -124,6 +124,7 @@ func AddFlags(flags *flag.FlagSet, ctx Context) *InitParams {
 	flag.Var(SizeFlag{&params.LogFileConfig.MaxSize}, "log-file-max-size", "Maximum size of a log file before rotation")
 	// The default is to *DELETE* old log files for kbfs.
 	flag.IntVar(&params.LogFileConfig.MaxKeepFiles, "log-file-max-keep-files", defaultParams.LogFileConfig.MaxKeepFiles, "Maximum number of log files for this service, older ones are deleted. 0 for infinite.")
+	flags.BoolVar(&params.WriteJournaling, "enable-write-journaling-which-may-lose-data", false, "Turn on write journaling (EXPERIMENTAL)")
 	return &params
 }
 
