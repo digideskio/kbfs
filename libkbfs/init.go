@@ -52,6 +52,10 @@ type InitParams struct {
 
 	// LogFileConfig tells us where to log and rotation config.
 	LogFileConfig logger.LogFileConfig
+
+	// WriteJournaling, if true, turns on write journalling. Still
+	// have to turn it on for each TLF, though.
+	WriteJournaling bool
 }
 
 // GetDefaultBServer returns the default value for the -bserver flag.
@@ -356,6 +360,13 @@ func Init(ctx Context, params InitParams, keybaseDaemonFn KeybaseDaemonFn, onInt
 	}
 
 	config.SetBlockServer(bserv)
+
+	if params.WriteJournaling {
+		jServer := makeJournalServer(
+			config.BlockServer(), config.MDServer())
+		config.SetBlockServer(jServer.blockServer())
+		config.SetMDServer(jServer.mdServer())
+	}
 
 	return config, nil
 }
