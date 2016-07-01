@@ -4,33 +4,43 @@
 
 package libkbfs
 
-// TODO: Make journalServer actually do something.
+import "errors"
 
-type journalServer struct {
+// TODO: Make JournalServer actually do something.
+
+type JournalServer struct {
 	delegateBlockServer BlockServer
 	delegateMDServer    MDServer
 }
 
+func (j JournalServer) EnableJournaling(tlfID TlfID) error {
+	return errors.New("Not implemented yet")
+}
+
+func (j JournalServer) DisableJournaling(tlfID TlfID) error {
+	return errors.New("Not implemented yet")
+}
+
 type journalBlockServer struct {
-	jServer journalServer
+	jServer JournalServer
 	BlockServer
 }
 
 type journalMDServer struct {
-	jServer journalServer
+	jServer JournalServer
 	MDServer
 }
 
-func (j journalServer) blockServer() journalBlockServer {
+func (j JournalServer) blockServer() journalBlockServer {
 	return journalBlockServer{j, j.delegateBlockServer}
 }
 
-func (j journalServer) mdServer() journalMDServer {
+func (j JournalServer) mdServer() journalMDServer {
 	return journalMDServer{j, j.delegateMDServer}
 }
 
-func makeJournalServer(bserver BlockServer, mdServer MDServer) journalServer {
-	jServer := journalServer{
+func makeJournalServer(bserver BlockServer, mdServer MDServer) JournalServer {
+	jServer := JournalServer{
 		delegateBlockServer: bserver,
 		delegateMDServer:    mdServer,
 	}
