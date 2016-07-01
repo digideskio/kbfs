@@ -59,10 +59,7 @@ func (j *JournalServer) DisableJournaling(tlfID TlfID) error {
 		return nil
 	}
 
-	// TODO: Flush to server before turning off.
-
-	bundle.enabled = false
-	return nil
+	return bundle.mdStorage.flushOne(j.delegateMDServer)
 }
 
 type journalBlockServer struct {

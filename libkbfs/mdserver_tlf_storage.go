@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"golang.org/x/net/context"
+
 	keybase1 "github.com/keybase/client/go/protocol"
 )
 
@@ -192,6 +194,22 @@ func (s *mdServerTlfStorage) getHeadForTLFReadLocked(bid BranchID) (
 		return nil, nil
 	}
 	return s.getMDReadLocked(headID)
+}
+
+func (s *mdServerTlfStorage) getEarliestForTLFReadLocked(bid BranchID) (
+	rmds *RootMetadataSigned, err error) {
+	j, ok := s.branchJournals[bid]
+	if !ok {
+		return nil, nil
+	}
+	earliestID, err := j.getEarliest()
+	if err != nil {
+		return nil, err
+	}
+	if earliestID == (MdID{}) {
+		return nil, nil
+	}
+	return s.getMDReadLocked(earliestID)
 }
 
 func (s *mdServerTlfStorage) checkGetParamsReadLocked(
@@ -388,6 +406,45 @@ func (s *mdServerTlfStorage) put(
 	}
 
 	return recordBranchID, nil
+}
+
+func (s *mdServerTlfStorage) flushOne(mdServer MDServer) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	j, err := s.getOrCreateBranchJournalLocked(NullBranchID)
+	if err != nil {
+		return err
+	}
+
+	earliestID, err := j.getEarliest()
+	if err != nil {
+		return err
+	}
+	if earliestID == (MdID{}) {
+		return nil
+	}
+	rmd, err := s.getMDReadLocked(earliestID)
+	if err != nil {
+		return err
+	}
+
+	err = mdServer.Put(context.Background(), rmd)
+	if err != nil {
+		return err
+	}
+
+	earliestRevision, err := j.readEarliestRevision()
+	if err != nil {
+		return err
+	}
+
+	err = j.writeEarliestRevision(earliestRevision + 1)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *mdServerTlfStorage) shutdown() {
