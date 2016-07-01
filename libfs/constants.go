@@ -38,3 +38,7 @@ const EnableUpdatesFileName = ".kbfs_enable_updates"
 
 // ResetCachesFileName is the name of the KBFS unstaging file.
 const ResetCachesFileName = ".kbfs_reset_caches"
+
+const DisableJournalingFileName = ".kbfs_disable_journaling"
+
+const EnableJournalingFileName = ".kbfs_enable_journaling"
