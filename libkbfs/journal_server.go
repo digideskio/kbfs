@@ -88,6 +88,7 @@ func makeJournalServer(
 		dir:                 dir,
 		delegateBlockServer: bserver,
 		delegateMDServer:    mdServer,
+		tlfBundles:          make(map[TlfID]tlfJournalBundle),
 	}
 	return &jServer
 }
