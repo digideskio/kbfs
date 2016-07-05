@@ -245,15 +245,18 @@ func (j *bserverTlfJournal) getDataLocked(id BlockID, context BlockContext) (
 	[]byte, BlockCryptKeyServerHalf, error) {
 	// Check arguments.
 
-	refEntry, err := j.getRefEntryLocked(id, context.GetRefNonce())
-	if err != nil {
-		return nil, BlockCryptKeyServerHalf{}, err
-	}
+	// TODO: Have a switch as to whether blocks stay accessible
+	// for replaying the journal.
+	/*
+		refEntry, err := j.getRefEntryLocked(id, context.GetRefNonce())
+		if err != nil {
+			return nil, BlockCryptKeyServerHalf{}, err
+		}
 
-	err = refEntry.checkContext(context)
-	if err != nil {
-		return nil, BlockCryptKeyServerHalf{}, err
-	}
+		err = refEntry.checkContext(context)
+		if err != nil {
+			return nil, BlockCryptKeyServerHalf{}, err
+		}*/
 
 	// Read files.
 
