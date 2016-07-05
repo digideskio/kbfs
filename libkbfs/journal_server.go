@@ -63,12 +63,12 @@ func (j *JournalServer) DisableJournaling(tlfID TlfID) error {
 }
 
 type journalBlockServer struct {
-	jServer JournalServer
+	jServer *JournalServer
 	BlockServer
 }
 
 type journalMDServer struct {
-	jServer JournalServer
+	jServer *JournalServer
 	MDServer
 }
 
@@ -108,11 +108,11 @@ func (j journalMDServer) Put(ctx context.Context, rmds *RootMetadataSigned) erro
 	return j.MDServer.Put(ctx, rmds)
 }
 
-func (j JournalServer) blockServer() journalBlockServer {
+func (j *JournalServer) blockServer() journalBlockServer {
 	return journalBlockServer{j, j.delegateBlockServer}
 }
 
-func (j JournalServer) mdServer() journalMDServer {
+func (j *JournalServer) mdServer() journalMDServer {
 	return journalMDServer{j, j.delegateMDServer}
 }
 

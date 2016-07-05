@@ -6,11 +6,11 @@ package libkbfs
 
 import "errors"
 
-func GetJournalServer(config Config) (JournalServer, error) {
+func GetJournalServer(config Config) (*JournalServer, error) {
 	bserver := config.BlockServer()
 	jbserver, ok := bserver.(journalBlockServer)
 	if !ok {
-		return JournalServer{}, errors.New("Write journaling not enabled")
+		return nil, errors.New("Write journaling not enabled")
 	}
 	return jbserver.jServer, nil
 }
