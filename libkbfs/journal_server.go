@@ -73,6 +73,10 @@ type journalMDServer struct {
 }
 
 func (j journalMDServer) Put(ctx context.Context, rmds *RootMetadataSigned) error {
+	if rmds.MD.BID != NullBranchID {
+		panic("Branches not supported yet")
+	}
+
 	bundle, ok := func() (*tlfJournalBundle, bool) {
 		j.jServer.lock.RLock()
 		defer j.jServer.lock.RUnlock()

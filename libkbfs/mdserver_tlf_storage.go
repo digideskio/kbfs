@@ -396,7 +396,7 @@ func (s *mdServerTlfStorage) flushOne(mdServer MDServer) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	j, ok := s.branchJournals[bid]
+	j, ok := s.branchJournals[NullBranchID]
 	if !ok {
 		return nil
 	}
