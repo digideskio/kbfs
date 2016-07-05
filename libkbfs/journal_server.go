@@ -37,7 +37,7 @@ type JournalServer struct {
 func (j *JournalServer) EnableJournaling(tlfID TlfID) (err error) {
 	j.log.Debug("Enabling journaling for %s", tlfID)
 	defer func() {
-		j.deferLog.Debug("EnableJournaling error: %s", err)
+		j.deferLog.Debug("EnableJournaling error: %v", err)
 	}()
 
 	j.lock.Lock()
@@ -61,7 +61,7 @@ func (j *JournalServer) EnableJournaling(tlfID TlfID) (err error) {
 func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 	j.log.Debug("Flushing %s", tlfID)
 	defer func() {
-		j.deferLog.Debug("Flush error: %s", err)
+		j.deferLog.Debug("Flush error: %v", err)
 	}()
 	j.lock.Lock()
 	defer j.lock.Unlock()
