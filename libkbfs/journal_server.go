@@ -70,7 +70,21 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 		return nil
 	}
 
-	return bundle.mdStorage.flushOne(j.delegateMDServer)
+	flushedEntries := 0
+	for {
+		flushed, err := bundle.mdStorage.flushOne(j.delegateMDServer)
+		if err != nil {
+			return err
+		}
+		if !flushed {
+			break
+		}
+		flushedEntries++
+	}
+
+	j.log.Debug("Flushed %d entries", flushedEntries)
+
+	return nil
 }
 
 type journalBlockServer struct {

@@ -392,34 +392,39 @@ func (s *mdServerTlfStorage) put(
 	return recordBranchID, nil
 }
 
-func (s *mdServerTlfStorage) flushOne(mdServer MDServer) error {
+func (s *mdServerTlfStorage) flushOne(mdServer MDServer) (bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	j, ok := s.branchJournals[NullBranchID]
 	if !ok {
-		return nil
+		return false, nil
 	}
 
 	earliestID, err := j.getEarliest()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if earliestID == (MdID{}) {
-		return nil
+		return false, nil
 	}
 
 	rmd, err := s.getMDReadLocked(earliestID)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	err = mdServer.Put(context.Background(), rmd)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return j.removeEarliest()
+	err = j.removeEarliest()
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (s *mdServerTlfStorage) shutdown() {
