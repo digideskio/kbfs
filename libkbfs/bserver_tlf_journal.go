@@ -13,6 +13,8 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/keybase/client/go/logger"
+
 	"golang.org/x/net/context"
 )
 
@@ -570,7 +572,8 @@ func (j *bserverTlfJournal) archiveReferences(
 	return j.appendJournalEntryLocked(archiveRefsOp, id, contexts)
 }
 
-func (j *bserverTlfJournal) flushOne(bserver BlockServer, tlfID TlfID) (bool, error) {
+func (j *bserverTlfJournal) flushOne(
+	bserver BlockServer, tlfID TlfID, log logger.Logger) (bool, error) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -589,6 +592,8 @@ func (j *bserverTlfJournal) flushOne(bserver BlockServer, tlfID TlfID) (bool, er
 	if err != nil {
 		return false, err
 	}
+
+	log.Debug("Flushing block op %v", e)
 
 	switch e.Op {
 	case blockPutOp:

@@ -83,7 +83,7 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 	flushedBlockEntries := 0
 	for {
 		flushed, err := bundle.bJournal.flushOne(
-			j.delegateBlockServer, tlfID)
+			j.delegateBlockServer, tlfID, j.log)
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,8 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 
 	flushedMDEntries := 0
 	for {
-		flushed, err := bundle.mdStorage.flushOne(j.delegateMDServer)
+		flushed, err := bundle.mdStorage.flushOne(
+			j.delegateMDServer, j.log)
 		if err != nil {
 			return err
 		}

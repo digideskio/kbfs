@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/keybase/client/go/logger"
+
 	"golang.org/x/net/context"
 
 	keybase1 "github.com/keybase/client/go/protocol"
@@ -392,7 +394,8 @@ func (s *mdServerTlfStorage) put(
 	return recordBranchID, nil
 }
 
-func (s *mdServerTlfStorage) flushOne(mdServer MDServer) (bool, error) {
+func (s *mdServerTlfStorage) flushOne(
+	mdServer MDServer, log logger.Logger) (bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -417,6 +420,8 @@ func (s *mdServerTlfStorage) flushOne(mdServer MDServer) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	log.Debug("Flushing MD put id=%s, rev=%s", earliestID, rmd.MD.Revision)
 
 	err = mdServer.Put(context.Background(), rmd)
 	if err != nil {
