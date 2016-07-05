@@ -169,6 +169,7 @@ func (j journalBlockServer) ArchiveBlockReferences(
 				return err
 			}
 		}
+		return nil
 	}
 
 	return j.BlockServer.ArchiveBlockReferences(ctx, tlfID, contexts)
