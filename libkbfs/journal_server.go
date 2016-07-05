@@ -95,7 +95,7 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 		flushedMDEntries++
 	}
 
-	j.log.Debug("Flushed %d block entries and %d entries",
+	j.log.Debug("Flushed %d block entries and %d MD entries",
 		flushedBlockEntries, flushedMDEntries)
 
 	return nil
