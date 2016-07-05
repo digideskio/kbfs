@@ -92,6 +92,25 @@ type journalBlockServer struct {
 	BlockServer
 }
 
+func (j journalBlockServer) Put(
+	ctx context.Context, id BlockID, tlfID TlfID, context BlockContext,
+	buf []byte, serverHalf BlockCryptKeyServerHalf) error {
+	bundle, ok := func() (*tlfJournalBundle, bool) {
+		j.jServer.lock.RLock()
+		defer j.jServer.lock.RUnlock()
+		bundle, ok := j.jServer.tlfBundles[tlfID]
+		if !ok {
+			return nil, false
+		}
+		return bundle, ok
+	}()
+	if ok {
+		return bundle.bJournal.putData(id, context, buf, serverHalf)
+	}
+
+	return j.BlockServer.Put(ctx, id, tlfID, context, buf, serverHalf)
+}
+
 type journalMDServer struct {
 	jServer *JournalServer
 	MDServer

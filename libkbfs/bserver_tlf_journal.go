@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"sync"
+
+	"golang.org/x/net/context"
 )
 
 // bserverTlfJournal stores an ordered list of BlockServer mutating
@@ -566,6 +568,64 @@ func (j *bserverTlfJournal) archiveReferences(
 	}
 
 	return j.appendJournalEntryLocked(archiveRefsOp, id, contexts)
+}
+
+func (j *bserverTlfJournal) flushOne(bserver BlockServer, tlfID TlfID) (bool, error) {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	if j.isShutdown {
+		return false, errBserverTlfJournalShutdown
+	}
+
+	earliestOrdinal, err := j.j.readEarliestOrdinal()
+	if os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	e, err := j.readJournalEntryLocked(earliestOrdinal)
+	if err != nil {
+		return false, err
+	}
+
+	switch e.Op {
+	case blockPutOp, addRefOp:
+		if len(e.Contexts) != 1 {
+			return false, fmt.Errorf(
+				"Op %s for id=%s doesn't have exactly one context: %v",
+				e.Op, e.ID, e.Contexts)
+		}
+
+		bContext := e.Contexts[0]
+		data, serverHalf, err := j.getDataLocked(e.ID, bContext)
+		if err != nil {
+			return false, err
+		}
+
+		err = bserver.Put(context.Background(), e.ID, tlfID,
+			bContext, data, serverHalf)
+		if err != nil {
+			return false, nil
+		}
+
+	case removeRefsOp:
+		panic("Not implemented")
+
+	case archiveRefsOp:
+		panic("Not implemented")
+
+	default:
+		return false, fmt.Errorf("Unknown op %s", e.Op)
+	}
+
+	err = j.j.removeEarliest()
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (j *bserverTlfJournal) shutdown() {

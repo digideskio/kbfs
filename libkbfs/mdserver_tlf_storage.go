@@ -396,6 +396,10 @@ func (s *mdServerTlfStorage) flushOne(mdServer MDServer) (bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	if s.isShutdownReadLocked() {
+		return false, errMDServerTlfStorageShutdown
+	}
+
 	j, ok := s.branchJournals[NullBranchID]
 	if !ok {
 		return false, nil

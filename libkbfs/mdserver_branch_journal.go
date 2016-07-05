@@ -177,23 +177,5 @@ func (j mdServerBranchJournal) append(r MetadataRevision, mdID MdID) error {
 }
 
 func (j mdServerBranchJournal) removeEarliest() error {
-	earliestRevision, err := j.readEarliestRevision()
-	if err != nil {
-		return err
-	}
-
-	if earliestRevision == MetadataRevisionUninitialized {
-		return nil
-	}
-
-	latestRevision, err := j.readLatestRevision()
-	if err != nil {
-		return err
-	}
-
-	if earliestRevision == latestRevision {
-		return j.j.clearOrdinals()
-	}
-
-	return j.writeEarliestRevision(earliestRevision + 1)
+	return j.j.removeEarliest()
 }
