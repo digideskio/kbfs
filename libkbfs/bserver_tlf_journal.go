@@ -513,10 +513,14 @@ func (j *bserverTlfJournal) removeReferences(
 
 	count := len(refs)
 	if count == 0 {
-		err := os.RemoveAll(j.blockPath(id))
-		if err != nil {
-			return 0, err
-		}
+		// TODO: Have a switch controlling whether or not to
+		// remove on zero ref.
+		/*
+			err := os.RemoveAll(j.blockPath(id))
+			if err != nil {
+				return 0, err
+			}
+		*/
 	}
 
 	// TODO: Figure out what to do with live count when we have a
