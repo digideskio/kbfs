@@ -34,6 +34,16 @@ type JournalServer struct {
 	tlfBundles map[TlfID]*tlfJournalBundle
 }
 
+func (j *JournalServer) getBundle(tlfID TlfID) (*tlfJournalBundle, bool) {
+	j.lock.RLock()
+	defer j.lock.RUnlock()
+	bundle, ok := j.tlfBundles[tlfID]
+	if !ok {
+		return nil, false
+	}
+	return bundle, ok
+}
+
 func (j *JournalServer) EnableJournaling(tlfID TlfID) (err error) {
 	j.log.Debug("Enabling journaling for %s", tlfID)
 	defer func() {
@@ -109,20 +119,59 @@ type journalBlockServer struct {
 func (j journalBlockServer) Put(
 	ctx context.Context, id BlockID, tlfID TlfID, context BlockContext,
 	buf []byte, serverHalf BlockCryptKeyServerHalf) error {
-	bundle, ok := func() (*tlfJournalBundle, bool) {
-		j.jServer.lock.RLock()
-		defer j.jServer.lock.RUnlock()
-		bundle, ok := j.jServer.tlfBundles[tlfID]
-		if !ok {
-			return nil, false
-		}
-		return bundle, ok
-	}()
+	bundle, ok := j.jServer.getBundle(tlfID)
 	if ok {
 		return bundle.bJournal.putData(id, context, buf, serverHalf)
 	}
 
 	return j.BlockServer.Put(ctx, id, tlfID, context, buf, serverHalf)
+}
+
+func (j journalBlockServer) AddBlockReference(
+	ctx context.Context, id BlockID, tlfID TlfID,
+	context BlockContext) error {
+	bundle, ok := j.jServer.getBundle(tlfID)
+	if ok {
+		return bundle.bJournal.addReference(id, context)
+	}
+
+	return j.BlockServer.AddBlockReference(ctx, id, tlfID, context)
+}
+
+func (j journalBlockServer) RemoveBlockReference(
+	ctx context.Context, tlfID TlfID,
+	contexts map[BlockID][]BlockContext) (
+	liveCounts map[BlockID]int, err error) {
+	bundle, ok := j.jServer.getBundle(tlfID)
+	if ok {
+		liveCounts = make(map[BlockID]int)
+		for id, idContexts := range contexts {
+			count, err := bundle.bJournal.removeReferences(id, idContexts)
+			if err != nil {
+				return nil, err
+			}
+			liveCounts[id] = count
+		}
+		return liveCounts, nil
+	}
+
+	return j.BlockServer.RemoveBlockReference(ctx, tlfID, contexts)
+}
+
+func (j journalBlockServer) ArchiveBlockReferences(
+	ctx context.Context, tlfID TlfID,
+	contexts map[BlockID][]BlockContext) error {
+	bundle, ok := j.jServer.getBundle(tlfID)
+	if ok {
+		for id, idContexts := range contexts {
+			err := bundle.bJournal.archiveReferences(id, idContexts)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return j.BlockServer.ArchiveBlockReferences(ctx, tlfID, contexts)
 }
 
 type journalMDServer struct {
@@ -135,15 +184,7 @@ func (j journalMDServer) Put(ctx context.Context, rmds *RootMetadataSigned) erro
 		panic("Branches not supported yet")
 	}
 
-	bundle, ok := func() (*tlfJournalBundle, bool) {
-		j.jServer.lock.RLock()
-		defer j.jServer.lock.RUnlock()
-		bundle, ok := j.jServer.tlfBundles[rmds.MD.ID]
-		if !ok {
-			return nil, false
-		}
-		return bundle, ok
-	}()
+	bundle, ok := j.jServer.getBundle(rmds.MD.ID)
 	if ok {
 		_, currentUID, err := j.jServer.kbpki.GetCurrentUserInfo(ctx)
 		if err != nil {
