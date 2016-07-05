@@ -183,12 +183,12 @@ type journalMDServer struct {
 }
 
 func (j journalMDServer) Put(ctx context.Context, rmds *RootMetadataSigned) error {
-	if rmds.MD.BID != NullBranchID {
-		panic("Branches not supported yet")
-	}
-
 	bundle, ok := j.jServer.getBundle(rmds.MD.ID)
 	if ok {
+		if rmds.MD.BID != NullBranchID {
+			panic("Branches not supported yet")
+		}
+
 		_, currentUID, err := j.jServer.kbpki.GetCurrentUserInfo(ctx)
 		if err != nil {
 			return MDServerError{err}
