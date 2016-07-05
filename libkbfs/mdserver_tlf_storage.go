@@ -408,6 +408,7 @@ func (s *mdServerTlfStorage) flushOne(mdServer MDServer) error {
 	if earliestID == (MdID{}) {
 		return nil
 	}
+
 	rmd, err := s.getMDReadLocked(earliestID)
 	if err != nil {
 		return err
@@ -418,17 +419,7 @@ func (s *mdServerTlfStorage) flushOne(mdServer MDServer) error {
 		return err
 	}
 
-	earliestRevision, err := j.readEarliestRevision()
-	if err != nil {
-		return err
-	}
-
-	err = j.writeEarliestRevision(earliestRevision + 1)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return j.removeEarliest()
 }
 
 func (s *mdServerTlfStorage) shutdown() {
