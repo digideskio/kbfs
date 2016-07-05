@@ -591,7 +591,7 @@ func (j *bserverTlfJournal) flushOne(bserver BlockServer, tlfID TlfID) (bool, er
 	}
 
 	switch e.Op {
-	case blockPutOp, addRefOp:
+	case blockPutOp:
 		if len(e.Contexts) != 1 {
 			return false, fmt.Errorf(
 				"Op %s for id=%s doesn't have exactly one context: %v",
@@ -607,14 +607,42 @@ func (j *bserverTlfJournal) flushOne(bserver BlockServer, tlfID TlfID) (bool, er
 		err = bserver.Put(context.Background(), e.ID, tlfID,
 			bContext, data, serverHalf)
 		if err != nil {
-			return false, nil
+			return false, err
+		}
+
+	case addRefOp:
+		if len(e.Contexts) != 1 {
+			return false, fmt.Errorf(
+				"Op %s for id=%s doesn't have exactly one context: %v",
+				e.Op, e.ID, e.Contexts)
+		}
+
+		bContext := e.Contexts[0]
+		err = bserver.AddBlockReference(
+			context.Background(), e.ID, tlfID, bContext)
+		if err != nil {
+			return false, err
 		}
 
 	case removeRefsOp:
-		panic("Not implemented")
+		// TODO: Combine multiple remove refs.
+		_, err = bserver.RemoveBlockReference(
+			context.Background(), tlfID, map[BlockID][]BlockContext{
+				e.ID: e.Contexts,
+			})
+		if err != nil {
+			return false, err
+		}
 
 	case archiveRefsOp:
-		panic("Not implemented")
+		// TODO: Combine multiple archive refs.
+		err = bserver.ArchiveBlockReferences(
+			context.Background(), tlfID, map[BlockID][]BlockContext{
+				e.ID: e.Contexts,
+			})
+		if err != nil {
+			return false, err
+		}
 
 	default:
 		return false, fmt.Errorf("Unknown op %s", e.Op)

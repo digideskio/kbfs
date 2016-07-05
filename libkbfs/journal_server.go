@@ -152,6 +152,7 @@ func (j journalBlockServer) RemoveBlockReference(
 			}
 			liveCounts[id] = count
 		}
+		// TODO: Reminder: fix the fact that liveCounts is bogus.
 		return liveCounts, nil
 	}
 
