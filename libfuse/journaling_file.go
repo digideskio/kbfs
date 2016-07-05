@@ -49,7 +49,7 @@ func (f *JournalingFile) Write(ctx context.Context, req *fuse.WriteRequest,
 			return err
 		}
 	} else {
-		jServer.DisableJournaling(f.folder.getFolderBranch().Tlf)
+		jServer.Flush(f.folder.getFolderBranch().Tlf)
 		if err != nil {
 			return err
 		}

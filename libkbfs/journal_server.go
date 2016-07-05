@@ -8,13 +8,12 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/keybase/client/go/logger"
+
 	"golang.org/x/net/context"
 )
 
-// TODO: Make JournalServer actually do something.
-
 type tlfJournalBundle struct {
-	enabled   bool
 	bJournal  *bserverTlfJournal
 	mdStorage *mdServerTlfStorage
 }
@@ -25,6 +24,9 @@ type JournalServer struct {
 	dir    string
 	kbpki  KBPKI
 
+	log      logger.Logger
+	deferLog logger.Logger
+
 	delegateBlockServer BlockServer
 	delegateMDServer    MDServer
 
@@ -32,7 +34,12 @@ type JournalServer struct {
 	tlfBundles map[TlfID]*tlfJournalBundle
 }
 
-func (j *JournalServer) EnableJournaling(tlfID TlfID) error {
+func (j *JournalServer) EnableJournaling(tlfID TlfID) (err error) {
+	j.log.Debug("Enabling journaling for %s", tlfID)
+	defer func() {
+		j.deferLog.Debug("EnableJournaling error: %s", err)
+	}()
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 	_, ok := j.tlfBundles[tlfID]
@@ -47,11 +54,15 @@ func (j *JournalServer) EnableJournaling(tlfID TlfID) error {
 		return err
 	}
 	mdStorage := makeMDServerTlfStorage(j.codec, j.crypto, path)
-	j.tlfBundles[tlfID] = &tlfJournalBundle{true, bJournal, mdStorage}
+	j.tlfBundles[tlfID] = &tlfJournalBundle{bJournal, mdStorage}
 	return nil
 }
 
-func (j *JournalServer) DisableJournaling(tlfID TlfID) error {
+func (j *JournalServer) Flush(tlfID TlfID) (err error) {
+	j.log.Debug("Flushing %s", tlfID)
+	defer func() {
+		j.deferLog.Debug("Flush error: %s", err)
+	}()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 	bundle, ok := j.tlfBundles[tlfID]
@@ -81,7 +92,7 @@ func (j journalMDServer) Put(ctx context.Context, rmds *RootMetadataSigned) erro
 		j.jServer.lock.RLock()
 		defer j.jServer.lock.RUnlock()
 		bundle, ok := j.jServer.tlfBundles[rmds.MD.ID]
-		if !ok || bundle.enabled == false {
+		if !ok {
 			return nil, false
 		}
 		return bundle, ok
@@ -121,12 +132,14 @@ func (j *JournalServer) mdServer() journalMDServer {
 }
 
 func makeJournalServer(
-	codec Codec, crypto cryptoPure, kbpki KBPKI, dir string,
-	bserver BlockServer, mdServer MDServer) *JournalServer {
+	codec Codec, crypto cryptoPure, kbpki KBPKI, log logger.Logger,
+	dir string, bserver BlockServer, mdServer MDServer) *JournalServer {
 	jServer := JournalServer{
 		codec:               codec,
 		crypto:              crypto,
 		kbpki:               kbpki,
+		log:                 log,
+		deferLog:            log.CloneWithAddedDepth(1),
 		dir:                 dir,
 		delegateBlockServer: bserver,
 		delegateMDServer:    mdServer,
