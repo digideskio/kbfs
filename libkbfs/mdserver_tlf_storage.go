@@ -196,22 +196,6 @@ func (s *mdServerTlfStorage) getHeadForTLFReadLocked(bid BranchID) (
 	return s.getMDReadLocked(headID)
 }
 
-func (s *mdServerTlfStorage) getEarliestForTLFReadLocked(bid BranchID) (
-	rmds *RootMetadataSigned, err error) {
-	j, ok := s.branchJournals[bid]
-	if !ok {
-		return nil, nil
-	}
-	earliestID, err := j.getEarliest()
-	if err != nil {
-		return nil, err
-	}
-	if earliestID == (MdID{}) {
-		return nil, nil
-	}
-	return s.getMDReadLocked(earliestID)
-}
-
 func (s *mdServerTlfStorage) checkGetParamsReadLocked(
 	currentUID keybase1.UID, bid BranchID) error {
 	mergedMasterHead, err := s.getHeadForTLFReadLocked(NullBranchID)
@@ -412,9 +396,9 @@ func (s *mdServerTlfStorage) flushOne(mdServer MDServer) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	j, err := s.getOrCreateBranchJournalLocked(NullBranchID)
-	if err != nil {
-		return err
+	j, ok := s.branchJournals[bid]
+	if !ok {
+		return nil
 	}
 
 	earliestID, err := j.getEarliest()
