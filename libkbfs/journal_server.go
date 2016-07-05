@@ -70,7 +70,20 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 		return nil
 	}
 
-	flushedEntries := 0
+	flushedBlockEntries := 0
+	for {
+		flushed, err := bundle.bJournal.flushOne(
+			j.delegateBlockServer, tlfID)
+		if err != nil {
+			return err
+		}
+		if !flushed {
+			break
+		}
+		flushedBlockEntries++
+	}
+
+	flushedMDEntries := 0
 	for {
 		flushed, err := bundle.mdStorage.flushOne(j.delegateMDServer)
 		if err != nil {
@@ -79,10 +92,11 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 		if !flushed {
 			break
 		}
-		flushedEntries++
+		flushedMDEntries++
 	}
 
-	j.log.Debug("Flushed %d entries", flushedEntries)
+	j.log.Debug("Flushed %d block entries and %d entries",
+		flushedBlockEntries, flushedMDEntries)
 
 	return nil
 }
