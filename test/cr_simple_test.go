@@ -976,7 +976,31 @@ func TestCrUnmergedBothRmfile(t *testing.T) {
 	)
 }
 
-// alice and bob both exclusively create the same file, but neither write to it
+// bob exclusively creates a file while on an unmerged branch.
+func TestCrCreateFileEXCLOnStaged(t *testing.T) {
+	test(t,
+		users("alice", "bob"),
+		as(alice,
+			mkdir("a"),
+		),
+		as(bob,
+			disableUpdates(),
+		),
+		as(alice,
+			mkfile("a/b", "hello"),
+		),
+		as(bob, noSync(),
+			mkfileexcl("a/c"),
+			reenableUpdates(),
+			lsdir("a/", m{"b$": "FILE", "c$": "FILE"}),
+		),
+		as(alice,
+			lsdir("a/", m{"b$": "FILE", "c$": "FILE"}),
+		),
+	)
+}
+
+// alice and bob both exclusively create the same file, but neither write to it.
 func TestCrBothCreateFileEXCL(t *testing.T) {
 	test(t,
 		users("alice", "bob"),
@@ -993,9 +1017,10 @@ func TestCrBothCreateFileEXCL(t *testing.T) {
 			expectError(mkfileexcl("a/b"), "b already exists"),
 			reenableUpdates(),
 			lsdir("a/", m{"b$": "FILE"}),
+			mkfile("a/c", "a hack to kick-off block cleanup"),
 		),
 		as(alice,
-			lsdir("a/", m{"b$": "FILE"}),
+			lsdir("a/", m{"b$": "FILE", "c$": "FILE"}),
 		),
 	)
 }
