@@ -218,6 +218,7 @@ type folderBranchOps struct {
 	// protects access to head and latestMergedRevision.
 	headLock leveledRWMutex
 	head     *RootMetadata
+	headID   MdID
 	// latestMergedRevision tracks the latest heard merged revision on server
 	latestMergedRevision MetadataRevision
 
@@ -471,6 +472,12 @@ func (fbo *folderBranchOps) getHead(lState *lockState) *RootMetadata {
 	return fbo.head
 }
 
+func (fbo *folderBranchOps) getHeadID(lState *lockState) MdID {
+	fbo.headLock.RLock(lState)
+	defer fbo.headLock.RUnlock(lState)
+	return fbo.headID
+}
+
 // isMasterBranch should not be called if mdWriterLock is already taken.
 func (fbo *folderBranchOps) isMasterBranch(lState *lockState) bool {
 	fbo.mdWriterLock.Lock(lState)
@@ -512,8 +519,13 @@ func (fbo *folderBranchOps) setHeadLocked(
 	isFirstHead := fbo.head == nil
 	wasReadable := !isFirstHead && fbo.head.IsReadable()
 
-	fbo.log.CDebugf(ctx, "Setting head revision to %d", md.Revision)
-	err := fbo.config.MDCache().Put(md)
+	headID, err := md.MetadataID(fbo.config.Crypto())
+	if err != nil {
+		return err
+	}
+
+	fbo.log.CDebugf(ctx, "Setting head revision to %d (id=%s)", md.Revision, headID)
+	err = fbo.config.MDCache().Put(md)
 	if err != nil {
 		return err
 	}
@@ -533,6 +545,7 @@ func (fbo *folderBranchOps) setHeadLocked(
 	}
 
 	fbo.head = md
+	fbo.headID = headID
 	fbo.status.setRootMetadata(md)
 	if isFirstHead {
 		// Start registering for updates right away, using this MD
@@ -603,12 +616,7 @@ func (fbo *folderBranchOps) setHeadSuccessorLocked(ctx context.Context,
 		return fbo.setInitialHeadTrustedLocked(ctx, lState, md)
 	}
 
-	currID, err := fbo.head.MetadataID(fbo.config.Crypto())
-	if err != nil {
-		return err
-	}
-
-	err = fbo.head.CheckValidSuccessor(currID, md)
+	err := fbo.head.CheckValidSuccessor(fbo.headID, md)
 	if err != nil {
 		return err
 	}
@@ -1788,18 +1796,14 @@ func (fbo *folderBranchOps) finalizeMDWriteLocked(ctx context.Context,
 	// finally, write out the new metadata
 	mdops := fbo.config.MDOps()
 
-	head := fbo.getHead(lState)
-	prevRoot, err := head.MetadataID(fbo.config.Crypto())
-	if err != nil {
-		return err
-	}
+	headID := fbo.getHeadID(lState)
 
 	doUnmergedPut, wasMasterBranch := true, fbo.isMasterBranchLocked(lState)
 	mergedRev := MetadataRevisionUninitialized
 
 	if fbo.isMasterBranchLocked(lState) {
 		// only do a normal Put if we're not already staged.
-		err = mdops.Put(ctx, prevRoot, md)
+		err = mdops.Put(ctx, headID, md)
 
 		if doUnmergedPut = fbo.isRevisionConflict(err); doUnmergedPut {
 			fbo.log.CDebugf(ctx, "Conflict: %v", err)
@@ -1822,7 +1826,7 @@ func (fbo *folderBranchOps) finalizeMDWriteLocked(ctx context.Context,
 		} else {
 			bid = fbo.bid
 		}
-		err := mdops.PutUnmerged(ctx, prevRoot, md, bid)
+		err := mdops.PutUnmerged(ctx, headID, md, bid)
 		if err != nil {
 			// TODO: if this is a conflict error, we should try to
 			// fast-forward to the most recent revision after
@@ -1872,14 +1876,10 @@ func (fbo *folderBranchOps) finalizeMDRekeyWriteLocked(ctx context.Context,
 	lState *lockState, md *RootMetadata) (err error) {
 	fbo.mdWriterLock.AssertLocked(lState)
 
-	head := fbo.getHead(lState)
-	prevRoot, err := head.MetadataID(fbo.config.Crypto())
-	if err != nil {
-		return err
-	}
+	headID := fbo.getHeadID(lState)
 
 	// finally, write out the new metadata
-	err = fbo.config.MDOps().Put(ctx, prevRoot, md)
+	err = fbo.config.MDOps().Put(ctx, headID, md)
 	isConflict := fbo.isRevisionConflict(err)
 	if err != nil && !isConflict {
 		return err
@@ -1950,14 +1950,10 @@ func (fbo *folderBranchOps) finalizeGCOp(ctx context.Context, gco *gcOp) (
 		}
 	}
 
-	head := fbo.getHead(lState)
-	prevRoot, err := head.MetadataID(fbo.config.Crypto())
-	if err != nil {
-		return err
-	}
+	headID := fbo.getHeadID(lState)
 
 	// finally, write out the new metadata
-	err = fbo.config.MDOps().Put(ctx, prevRoot, md)
+	err = fbo.config.MDOps().Put(ctx, headID, md)
 	if err != nil {
 		// Don't allow garbage collection to put us into a conflicting
 		// state; just wait for the next period.
