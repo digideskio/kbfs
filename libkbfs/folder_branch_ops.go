@@ -994,12 +994,6 @@ func (fbo *folderBranchOps) initMDLocked(
 
 	fbo.headLock.Lock(lState)
 	defer fbo.headLock.Unlock(lState)
-	if fbo.head != nil {
-		headID, _ := fbo.head.MetadataID(fbo.config.Crypto())
-		return fmt.Errorf(
-			"%v: Unexpected MD ID during new MD initialization: %v",
-			md.ID, headID)
-	}
 	fbo.setNewInitialHeadLocked(ctx, lState, md)
 	if err != nil {
 		return err
