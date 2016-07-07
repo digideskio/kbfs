@@ -510,25 +510,7 @@ func (fbo *folderBranchOps) setHeadLocked(
 	fbo.headLock.AssertLocked(lState)
 
 	isFirstHead := fbo.head == nil
-	wasReadable := false
-	if !isFirstHead {
-		wasReadable = fbo.head.IsReadable()
-
-		mdID, err := md.MetadataID(fbo.config.Crypto())
-		if err != nil {
-			return err
-		}
-
-		headID, err := fbo.head.MetadataID(fbo.config.Crypto())
-		if err != nil {
-			return err
-		}
-
-		if headID == mdID {
-			// only save this new MD if the MDID has changed
-			return nil
-		}
-	}
+	wasReadable := !isFirstHead && fbo.head.IsReadable()
 
 	fbo.log.CDebugf(ctx, "Setting head revision to %d", md.Revision)
 	err := fbo.config.MDCache().Put(md)
