@@ -480,8 +480,8 @@ func (md *MDOpsStandard) readyMD(ctx context.Context, prevRmd, rmd *RootMetadata
 			return nil, err
 		}
 
-		if prevRoot != rmd.PrevRoot {
-			panic(fmt.Sprintf("Expected %s, got %s", rmd.PrevRoot, prevRoot))
+		if rmd.PrevRoot != (MdID{}) && prevRoot != rmd.PrevRoot {
+			panic(fmt.Errorf("Expected %s, got %s", rmd.PrevRoot, prevRoot))
 		}
 
 		rmd.PrevRoot = prevRoot

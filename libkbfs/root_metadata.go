@@ -394,10 +394,8 @@ func (md *RootMetadata) MakeSuccessor(config Config, isWriter bool) (*RootMetada
 		newMd.Flags |= MetadataFlagWriterMetadataCopied
 	}
 
-	newMd.PrevRoot, err = md.MetadataID(config.Crypto())
-	if err != nil {
-		return nil, err
-	}
+	newMd.PrevRoot = MdID{}
+
 	// bump revision
 	if md.Revision < MetadataRevisionInitial {
 		return nil, errors.New("MD with invalid revision")

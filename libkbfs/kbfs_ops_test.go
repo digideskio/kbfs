@@ -1044,12 +1044,29 @@ func expectSyncBlockHelper(
 				Do(func(ctx context.Context, prevRmd, rmd *RootMetadata, bid BranchID) {
 					// add some serialized metadata to satisfy the check
 					rmd.SerializedPrivateMetadata = make([]byte, 1)
+					if prevRmd != nil {
+						prevRoot, err := prevRmd.MetadataID(config.Crypto())
+						if err != nil {
+							panic(err)
+						}
+
+						rmd.PrevRoot = prevRoot
+					}
 				}).Return(nil)
 		} else {
 			config.mockMdops.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).
 				Do(func(ctx context.Context, prevRmd, rmd *RootMetadata) {
 					// add some serialized metadata to satisfy the check
 					rmd.SerializedPrivateMetadata = make([]byte, 1)
+
+					if prevRmd != nil {
+						prevRoot, err := prevRmd.MetadataID(config.Crypto())
+						if err != nil {
+							panic(err)
+						}
+
+						rmd.PrevRoot = prevRoot
+					}
 				}).Return(nil)
 		}
 		config.mockMdcache.EXPECT().Put(gomock.Any()).

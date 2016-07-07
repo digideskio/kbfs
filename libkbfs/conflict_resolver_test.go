@@ -104,8 +104,9 @@ func TestCRInput(t *testing.T) {
 
 	// CR doesn't see any operations and so it does resolution early.
 	// Just cause an error so it doesn't bother the mocks too much.
-	config.mockCrypto.EXPECT().MakeMdID(gomock.Any()).Return(MdID{},
-		errors.New("Stopping resolution process early"))
+	config.mockMdops.EXPECT().
+		Put(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(errors.New("Stopping resolution process early"))
 	config.mockRep.EXPECT().ReportErr(gomock.Any(), gomock.Any(),
 		gomock.Any(), gomock.Any(), gomock.Any())
 
@@ -200,8 +201,9 @@ func TestCRInputFracturedRange(t *testing.T) {
 
 	// CR doesn't see any operations and so it does resolution early.
 	// Just cause an error so it doesn't bother the mocks too much.
-	config.mockCrypto.EXPECT().MakeMdID(gomock.Any()).Return(MdID{},
-		errors.New("Stopping resolution process early"))
+	config.mockMdops.EXPECT().
+		Put(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(errors.New("Stopping resolution process early"))
 	config.mockRep.EXPECT().ReportErr(gomock.Any(), gomock.Any(),
 		gomock.Any(), gomock.Any(), gomock.Any())
 
