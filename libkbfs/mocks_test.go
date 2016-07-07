@@ -4,15 +4,14 @@
 package libkbfs
 
 import (
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
 	libkb "github.com/keybase/client/go/libkb"
 	logger "github.com/keybase/client/go/logger"
 	protocol "github.com/keybase/client/go/protocol"
 	go_metrics "github.com/rcrowley/go-metrics"
 	context "golang.org/x/net/context"
+	reflect "reflect"
+	time "time"
 )
 
 // Mock of AuthTokenRefreshHandler interface
@@ -2085,24 +2084,24 @@ func (_mr *_MockMDOpsRecorder) GetUnmergedRange(arg0, arg1, arg2, arg3, arg4 int
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUnmergedRange", arg0, arg1, arg2, arg3, arg4)
 }
 
-func (_m *MockMDOps) Put(ctx context.Context, rmd *RootMetadata) error {
-	ret := _m.ctrl.Call(_m, "Put", ctx, rmd)
+func (_m *MockMDOps) Put(ctx context.Context, prevRmd *RootMetadata, rmd *RootMetadata) error {
+	ret := _m.ctrl.Call(_m, "Put", ctx, prevRmd, rmd)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockMDOpsRecorder) Put(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Put", arg0, arg1)
+func (_mr *_MockMDOpsRecorder) Put(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Put", arg0, arg1, arg2)
 }
 
-func (_m *MockMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata, bid BranchID) error {
-	ret := _m.ctrl.Call(_m, "PutUnmerged", ctx, rmd, bid)
+func (_m *MockMDOps) PutUnmerged(ctx context.Context, prevRmd *RootMetadata, rmd *RootMetadata, bid BranchID) error {
+	ret := _m.ctrl.Call(_m, "PutUnmerged", ctx, prevRmd, rmd, bid)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockMDOpsRecorder) PutUnmerged(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "PutUnmerged", arg0, arg1, arg2)
+func (_mr *_MockMDOpsRecorder) PutUnmerged(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "PutUnmerged", arg0, arg1, arg2, arg3)
 }
 
 func (_m *MockMDOps) GetLatestHandleForTLF(ctx context.Context, id TlfID) (BareTlfHandle, error) {

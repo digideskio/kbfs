@@ -173,14 +173,14 @@ func (m *stallingMDOps) GetUnmergedRange(ctx context.Context, id TlfID,
 	return m.delegate.GetUnmergedRange(ctx, id, bid, start, stop)
 }
 
-func (m *stallingMDOps) Put(ctx context.Context, md *RootMetadata) error {
+func (m *stallingMDOps) Put(ctx context.Context, prevMd, md *RootMetadata) error {
 	m.maybeStall(ctx, "Put")
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
-	err := m.delegate.Put(ctx, md)
+	err := m.delegate.Put(ctx, prevMd, md)
 	m.maybeStall(ctx, "AfterPut")
 	// If the Put was canceled, return the cancel error.  This
 	// emulates the Put being canceled while the RPC is outstanding.
@@ -192,7 +192,7 @@ func (m *stallingMDOps) Put(ctx context.Context, md *RootMetadata) error {
 	}
 }
 
-func (m *stallingMDOps) PutUnmerged(ctx context.Context, md *RootMetadata,
+func (m *stallingMDOps) PutUnmerged(ctx context.Context, prevMd, md *RootMetadata,
 	bid BranchID) error {
 	m.maybeStall(ctx, "PutUnmerged")
 	select {
@@ -200,7 +200,7 @@ func (m *stallingMDOps) PutUnmerged(ctx context.Context, md *RootMetadata,
 		return ctx.Err()
 	default:
 	}
-	err := m.delegate.PutUnmerged(ctx, md, bid)
+	err := m.delegate.PutUnmerged(ctx, prevMd, md, bid)
 	// If the PutUnmerged was canceled, return the cancel error.  This
 	// emulates the PutUnmerged being canceled while the RPC is
 	// outstanding.

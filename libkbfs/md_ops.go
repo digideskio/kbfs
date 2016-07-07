@@ -420,7 +420,7 @@ func (md *MDOpsStandard) GetUnmergedRange(ctx context.Context, id TlfID,
 	return md.getRange(ctx, id, bid, Unmerged, start, stop)
 }
 
-func (md *MDOpsStandard) readyMD(ctx context.Context, rmd *RootMetadata) (
+func (md *MDOpsStandard) readyMD(ctx context.Context, prevRmd, rmd *RootMetadata) (
 	rms *RootMetadataSigned, err error) {
 	_, me, err := md.config.KBPKI().GetCurrentUserInfo(ctx)
 	if err != nil {
@@ -496,8 +496,8 @@ func (md *MDOpsStandard) readyMD(ctx context.Context, rmd *RootMetadata) (
 	return rmds, nil
 }
 
-func (md *MDOpsStandard) put(ctx context.Context, rmd *RootMetadata) error {
-	rmds, err := md.readyMD(ctx, rmd)
+func (md *MDOpsStandard) put(ctx context.Context, prevRmd, rmd *RootMetadata) error {
+	rmds, err := md.readyMD(ctx, prevRmd, rmd)
 	if err != nil {
 		return err
 	}
@@ -509,18 +509,18 @@ func (md *MDOpsStandard) put(ctx context.Context, rmd *RootMetadata) error {
 }
 
 // Put implements the MDOps interface for MDOpsStandard.
-func (md *MDOpsStandard) Put(ctx context.Context, rmd *RootMetadata) error {
+func (md *MDOpsStandard) Put(ctx context.Context, prevRmd, rmd *RootMetadata) error {
 	if rmd.MergedStatus() == Unmerged {
 		return UnexpectedUnmergedPutError{}
 	}
-	return md.put(ctx, rmd)
+	return md.put(ctx, prevRmd, rmd)
 }
 
 // PutUnmerged implements the MDOps interface for MDOpsStandard.
-func (md *MDOpsStandard) PutUnmerged(ctx context.Context, rmd *RootMetadata, bid BranchID) error {
+func (md *MDOpsStandard) PutUnmerged(ctx context.Context, prevRmd, rmd *RootMetadata, bid BranchID) error {
 	rmd.WFlags |= MetadataFlagUnmerged
 	rmd.BID = bid
-	return md.put(ctx, rmd)
+	return md.put(ctx, prevRmd, rmd)
 }
 
 // GetLatestHandleForTLF implements the MDOps interface for MDOpsStandard.

@@ -458,7 +458,7 @@ func testKBFSOpsGetRootNodeCreateNewSuccess(t *testing.T, public bool) {
 	// now cache and put everything
 	config.mockBops.EXPECT().Put(ctx, rmd, ptrMatcher{rootPtr}, readyBlockData).
 		Return(nil)
-	config.mockMdops.EXPECT().Put(gomock.Any(), rmd).Return(nil)
+	config.mockMdops.EXPECT().Put(gomock.Any(), nil, rmd).Return(nil)
 	config.mockMdcache.EXPECT().Put(rmd).Return(nil)
 
 	ops := getOps(config, id)
@@ -1035,19 +1035,19 @@ func expectSyncBlockHelper(
 	if skipSync == 0 {
 		// sign the MD and put it
 		if isUnmerged {
-			config.mockMdops.EXPECT().Put(gomock.Any(), gomock.Any()).Return(MDServerErrorConflictRevision{})
+			config.mockMdops.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).Return(MDServerErrorConflictRevision{})
 			if rmd.BID == NullBranchID {
 				config.mockCrypto.EXPECT().MakeRandomBranchID().Return(BranchID{}, nil)
 			}
 			config.mockMdops.EXPECT().PutUnmerged(
-				gomock.Any(), gomock.Any(), gomock.Any()).
-				Do(func(ctx context.Context, rmd *RootMetadata, bid BranchID) {
+				gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				Do(func(ctx context.Context, prevRmd, rmd *RootMetadata, bid BranchID) {
 					// add some serialized metadata to satisfy the check
 					rmd.SerializedPrivateMetadata = make([]byte, 1)
 				}).Return(nil)
 		} else {
-			config.mockMdops.EXPECT().Put(gomock.Any(), gomock.Any()).
-				Do(func(ctx context.Context, rmd *RootMetadata) {
+			config.mockMdops.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).
+				Do(func(ctx context.Context, prevRmd, rmd *RootMetadata) {
 					// add some serialized metadata to satisfy the check
 					rmd.SerializedPrivateMetadata = make([]byte, 1)
 				}).Return(nil)

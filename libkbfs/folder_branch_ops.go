@@ -988,7 +988,7 @@ func (fbo *folderBranchOps) initMDLocked(
 	}
 
 	// finally, write out the new metadata
-	if err = fbo.config.MDOps().Put(ctx, md); err != nil {
+	if err = fbo.config.MDOps().Put(ctx, nil, md); err != nil {
 		return err
 	}
 
@@ -1778,12 +1778,14 @@ func (fbo *folderBranchOps) finalizeMDWriteLocked(ctx context.Context,
 	// finally, write out the new metadata
 	mdops := fbo.config.MDOps()
 
+	head := fbo.getHead(lState)
+
 	doUnmergedPut, wasMasterBranch := true, fbo.isMasterBranchLocked(lState)
 	mergedRev := MetadataRevisionUninitialized
 
 	if fbo.isMasterBranchLocked(lState) {
 		// only do a normal Put if we're not already staged.
-		err = mdops.Put(ctx, md)
+		err = mdops.Put(ctx, head, md)
 
 		if doUnmergedPut = fbo.isRevisionConflict(err); doUnmergedPut {
 			fbo.log.CDebugf(ctx, "Conflict: %v", err)
@@ -1806,7 +1808,7 @@ func (fbo *folderBranchOps) finalizeMDWriteLocked(ctx context.Context,
 		} else {
 			bid = fbo.bid
 		}
-		err := mdops.PutUnmerged(ctx, md, bid)
+		err := mdops.PutUnmerged(ctx, head, md, bid)
 		if err != nil {
 			// TODO: if this is a conflict error, we should try to
 			// fast-forward to the most recent revision after
@@ -1856,8 +1858,10 @@ func (fbo *folderBranchOps) finalizeMDRekeyWriteLocked(ctx context.Context,
 	lState *lockState, md *RootMetadata) (err error) {
 	fbo.mdWriterLock.AssertLocked(lState)
 
+	head := fbo.getHead(lState)
+
 	// finally, write out the new metadata
-	err = fbo.config.MDOps().Put(ctx, md)
+	err = fbo.config.MDOps().Put(ctx, head, md)
 	isConflict := fbo.isRevisionConflict(err)
 	if err != nil && !isConflict {
 		return err
@@ -1928,8 +1932,10 @@ func (fbo *folderBranchOps) finalizeGCOp(ctx context.Context, gco *gcOp) (
 		}
 	}
 
+	head := fbo.getHead(lState)
+
 	// finally, write out the new metadata
-	err = fbo.config.MDOps().Put(ctx, md)
+	err = fbo.config.MDOps().Put(ctx, head, md)
 	if err != nil {
 		// Don't allow garbage collection to put us into a conflicting
 		// state; just wait for the next period.
@@ -4027,9 +4033,11 @@ func (fbo *folderBranchOps) finalizeResolution(ctx context.Context,
 	default:
 	}
 
+	head := fbo.getHead(lState)
+
 	// Put the MD.  If there's a conflict, abort the whole process and
 	// let CR restart itself.
-	err = fbo.config.MDOps().Put(ctx, md)
+	err = fbo.config.MDOps().Put(ctx, head, md)
 	doUnmergedPut := fbo.isRevisionConflict(err)
 	if doUnmergedPut {
 		fbo.log.CDebugf(ctx, "Got a conflict after resolution; aborting CR")

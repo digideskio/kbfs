@@ -808,11 +808,11 @@ type MDOps interface {
 
 	// Put stores the metadata object for the given
 	// top-level folder.
-	Put(ctx context.Context, rmd *RootMetadata) error
+	Put(ctx context.Context, prevRmd, rmd *RootMetadata) error
 
 	// PutUnmerged is the same as the above but for unmerged
 	// metadata history.
-	PutUnmerged(ctx context.Context, rmd *RootMetadata, bid BranchID) error
+	PutUnmerged(ctx context.Context, prevRmd, rmd *RootMetadata, bid BranchID) error
 
 	// GetLatestHandleForTLF returns the server's idea of the latest handle for the TLF,
 	// which may not yet be reflected in the MD if the TLF hasn't been rekeyed since it

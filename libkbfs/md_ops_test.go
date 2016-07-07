@@ -667,7 +667,7 @@ func TestMDOpsPutPublicSuccess(t *testing.T) {
 	rmd.tlfHandle = h
 
 	ctx := context.Background()
-	err = config.MDOps().Put(ctx, &rmd)
+	err = config.MDOps().Put(ctx, nil, &rmd)
 
 	rmds := mdServer.getLastRmds()
 	validatePutPublicRMDS(ctx, t, config, &rmd, rmds)
@@ -680,7 +680,7 @@ func TestMDOpsPutPrivateSuccess(t *testing.T) {
 	rmds := newRMDS(t, config, false)
 	putMDForPrivate(config, rmds)
 
-	if err := config.MDOps().PutUnmerged(ctx, &rmds.MD, NullBranchID); err != nil {
+	if err := config.MDOps().PutUnmerged(ctx, nil, &rmds.MD, NullBranchID); err != nil {
 		t.Errorf("Got error on put: %v", err)
 	}
 }
@@ -700,7 +700,7 @@ func TestMDOpsPutFailEncode(t *testing.T) {
 	err := errors.New("Fake fail")
 	config.mockCodec.EXPECT().Encode(gomock.Any()).Return(nil, err)
 
-	if err2 := config.MDOps().Put(ctx, rmd); err2 != err {
+	if err2 := config.MDOps().Put(ctx, nil, rmd); err2 != err {
 		t.Errorf("Got bad error on put: %v", err2)
 	}
 }
