@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/keybase/client/go/libkb"
+	"github.com/keybase/client/go/logger"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
@@ -34,9 +35,6 @@ func mdOpsShutdown(mockCtrl *gomock.Controller, config *ConfigMock) {
 
 func addFakeRMDSData(rmds *RootMetadataSigned, h *TlfHandle) {
 	rmds.MD.tlfHandle = h
-
-	// Need to do this to avoid calls to the mocked-out MakeMdID.
-	rmds.MD.mdID = fakeMdID(fakeTlfIDByte(rmds.MD.ID))
 
 	rmds.MD.Revision = MetadataRevision(1)
 	rmds.MD.LastModifyingWriter = h.FirstResolvedWriter()
@@ -460,6 +458,15 @@ func TestMDOpsGetFailGet(t *testing.T) {
 	}
 }
 
+type shimCrypto struct {
+	Crypto
+	pure cryptoPure
+}
+
+func (c shimCrypto) MakeMdID(md *RootMetadata) (MdID, error) {
+	return c.pure.MakeMdID(md)
+}
+
 func TestMDOpsGetFailIdCheck(t *testing.T) {
 	mockCtrl, config, ctx := mdOpsInit(t)
 	defer mdOpsShutdown(mockCtrl, config)
@@ -485,22 +492,27 @@ func testMDOpsGetRangeSuccess(t *testing.T, fromStart bool) {
 	mockCtrl, config, ctx := mdOpsInit(t)
 	defer mdOpsShutdown(mockCtrl, config)
 
+	c := shimCrypto{config.Crypto(), MakeCryptoCommon(NewCodecMsgpack(), logger.NewTestLogger(t))}
+	config.SetCrypto(c)
+
 	rmds1 := newRMDS(t, config, false)
+	rmds1.MD.PrevRoot = fakeMdID(42)
+	rmds1.MD.SerializedPrivateMetadata = []byte{1}
+	rmds1.MD.Revision = 100
+	rmds1ID, err := rmds1.MD.MetadataID(c)
+	require.NoError(t, err)
 
 	rmds2 := newRMDS(t, config, false)
-
-	rmds2.MD.mdID = fakeMdID(42)
-	rmds1.MD.PrevRoot = rmds2.MD.mdID
-	rmds1.MD.Revision = 102
+	rmds2.MD.PrevRoot = rmds1ID
+	rmds2.MD.SerializedPrivateMetadata = []byte{1}
+	rmds2.MD.Revision = 101
+	rmds2ID, err := rmds2.MD.MetadataID(c)
+	require.NoError(t, err)
 
 	rmds3 := newRMDS(t, config, false)
-
-	rmds3.MD.mdID = fakeMdID(43)
-	rmds2.MD.PrevRoot = rmds3.MD.mdID
-	rmds2.MD.Revision = 101
-	mdID4 := fakeMdID(44)
-	rmds3.MD.PrevRoot = mdID4
-	rmds3.MD.Revision = 100
+	rmds3.MD.PrevRoot = rmds2ID
+	rmds3.MD.SerializedPrivateMetadata = []byte{1}
+	rmds3.MD.Revision = 102
 
 	start, stop := MetadataRevision(100), MetadataRevision(102)
 	if fromStart {
@@ -508,9 +520,9 @@ func testMDOpsGetRangeSuccess(t *testing.T, fromStart bool) {
 	}
 
 	// Do this before setting tlfHandles to nil.
-	verifyMDForPrivate(config, rmds3)
-	verifyMDForPrivate(config, rmds2)
 	verifyMDForPrivate(config, rmds1)
+	verifyMDForPrivate(config, rmds2)
+	verifyMDForPrivate(config, rmds3)
 
 	// Set tlfHandles to nil so that the md server returns
 	// 'deserialized' RMDSes.
@@ -518,17 +530,16 @@ func testMDOpsGetRangeSuccess(t *testing.T, fromStart bool) {
 	rmds2.MD.tlfHandle = nil
 	rmds3.MD.tlfHandle = nil
 
-	allRMDSs := []*RootMetadataSigned{rmds3, rmds2, rmds1}
+	rmdsRange := []*RootMetadataSigned{rmds1, rmds2, rmds3}
 
 	config.mockMdserv.EXPECT().GetRange(ctx, rmds1.MD.ID, NullBranchID, Merged, start,
-		stop).Return(allRMDSs, nil)
+		stop).Return(rmdsRange, nil)
 
-	allRMDs, err := config.MDOps().GetRange(ctx, rmds1.MD.ID, start, stop)
-	if err != nil {
-		t.Errorf("Got error on GetRange: %v", err)
-	} else if len(allRMDs) != 3 {
-		t.Errorf("Got back wrong number of RMDs: %d", len(allRMDs))
-	}
+	expectedMDRange := []*RootMetadata{&rmds1.MD, &rmds2.MD, &rmds3.MD}
+
+	mdRange, err := config.MDOps().GetRange(ctx, rmds1.MD.ID, start, stop)
+	require.NoError(t, err)
+	require.Equal(t, expectedMDRange, mdRange)
 }
 
 func TestMDOpsGetRangeSuccess(t *testing.T) {
@@ -543,46 +554,43 @@ func TestMDOpsGetRangeFailBadPrevRoot(t *testing.T) {
 	mockCtrl, config, ctx := mdOpsInit(t)
 	defer mdOpsShutdown(mockCtrl, config)
 
+	c := shimCrypto{config.Crypto(), MakeCryptoCommon(NewCodecMsgpack(), logger.NewTestLogger(t))}
+	config.SetCrypto(c)
+
 	rmds1 := newRMDS(t, config, false)
+	rmds1.MD.PrevRoot = fakeMdID(42)
+	rmds1.MD.SerializedPrivateMetadata = []byte{1}
+	rmds1.MD.Revision = 100
 
 	rmds2 := newRMDS(t, config, false)
-
-	rmds2.MD.mdID = fakeMdID(42)
-	rmds1.MD.PrevRoot = fakeMdID(46) // points to some random ID
-	rmds1.MD.Revision = 202
+	rmds2.MD.PrevRoot = fakeMdID(43)
+	rmds2.MD.SerializedPrivateMetadata = []byte{1}
+	rmds2.MD.Revision = 101
+	rmds2ID, err := rmds2.MD.MetadataID(c)
+	require.NoError(t, err)
 
 	rmds3 := newRMDS(t, config, false)
+	rmds3.MD.PrevRoot = rmds2ID
+	rmds3.MD.SerializedPrivateMetadata = []byte{1}
+	rmds3.MD.Revision = 102
 
-	rmds3.MD.mdID = fakeMdID(43)
-	rmds2.MD.PrevRoot = rmds3.MD.mdID
-	rmds2.MD.Revision = 201
-	mdID4 := fakeMdID(44)
-	rmds3.MD.PrevRoot = mdID4
-	rmds3.MD.Revision = 200
+	// Do this before setting tlfHandles to nil.
+	verifyMDForPrivate(config, rmds1)
 
-	// Do this before setting tlfHandle to nil.
-	verifyMDForPrivate(config, rmds3)
-	verifyMDForPrivate(config, rmds2)
-
-	// Set tlfHandle to nil so that the md server returns
+	// Set tlfHandles to nil so that the md server returns
 	// 'deserialized' RMDSes.
 	rmds1.MD.tlfHandle = nil
 	rmds2.MD.tlfHandle = nil
 	rmds3.MD.tlfHandle = nil
 
-	allRMDSs := []*RootMetadataSigned{rmds3, rmds2, rmds1}
+	allRMDSs := []*RootMetadataSigned{rmds1, rmds2, rmds3}
 
-	start, stop := MetadataRevision(200), MetadataRevision(202)
+	start, stop := MetadataRevision(100), MetadataRevision(102)
 	config.mockMdserv.EXPECT().GetRange(ctx, rmds1.MD.ID, NullBranchID, Merged, start,
 		stop).Return(allRMDSs, nil)
 
-	_, err := config.MDOps().GetRange(ctx, rmds1.MD.ID, start, stop)
-	if err == nil {
-		t.Errorf("Got no expected error on GetSince")
-	} else if _, ok := err.(MDMismatchError); !ok {
-		t.Errorf("Got unexpected error on GetSince with bad PrevRoot chain: %v",
-			err)
-	}
+	_, err = config.MDOps().GetRange(ctx, rmds1.MD.ID, start, stop)
+	require.IsType(t, MDMismatchError{}, err)
 }
 
 type fakeMDServerPut struct {
@@ -709,25 +717,33 @@ func TestMDOpsGetRangeFailFinal(t *testing.T) {
 	mockCtrl, config, ctx := mdOpsInit(t)
 	defer mdOpsShutdown(mockCtrl, config)
 
+	c := shimCrypto{config.Crypto(), MakeCryptoCommon(NewCodecMsgpack(), logger.NewTestLogger(t))}
+	config.SetCrypto(c)
+
 	rmds1 := newRMDS(t, config, false)
+	rmds1.MD.PrevRoot = fakeMdID(42)
+	rmds1.MD.SerializedPrivateMetadata = []byte{1}
+	rmds1.MD.Revision = 100
+	rmds1ID, err := rmds1.MD.MetadataID(c)
+	require.NoError(t, err)
+
 	rmds2 := newRMDS(t, config, false)
-	rmds3 := newRMDS(t, config, false)
-
-	rmds3.MD.Revision = 200
-	rmds3.MD.mdID = fakeMdID(40)
-	rmds3.MD.PrevRoot = fakeMdID(39)
-
-	rmds2.MD.Revision = 201
-	rmds2.MD.mdID = fakeMdID(41)
-	rmds2.MD.PrevRoot = rmds3.MD.mdID
+	rmds2.MD.PrevRoot = rmds1ID
+	rmds2.MD.SerializedPrivateMetadata = []byte{1}
+	rmds2.MD.Revision = 101
 	rmds2.MD.Flags |= MetadataFlagFinal
+	rmds2ID, err := rmds2.MD.MetadataID(c)
+	require.NoError(t, err)
 
-	rmds1.MD.Revision = 202
-	rmds1.MD.mdID = fakeMdID(42)
-	rmds1.MD.PrevRoot = rmds2.MD.mdID
+	rmds3 := newRMDS(t, config, false)
+	rmds3.MD.PrevRoot = rmds2ID
+	rmds3.MD.SerializedPrivateMetadata = []byte{1}
+	rmds3.MD.Revision = 102
+
+	start, stop := MetadataRevision(100), MetadataRevision(102)
 
 	// Do this before setting tlfHandle to nil.
-	verifyMDForPrivate(config, rmds3)
+	verifyMDForPrivate(config, rmds1)
 	verifyMDForPrivate(config, rmds2)
 
 	// Set tlfHandle to nil so that the md server returns
@@ -736,17 +752,11 @@ func TestMDOpsGetRangeFailFinal(t *testing.T) {
 	rmds2.MD.tlfHandle = nil
 	rmds3.MD.tlfHandle = nil
 
-	allRMDSs := []*RootMetadataSigned{rmds3, rmds2, rmds1}
+	allRMDSs := []*RootMetadataSigned{rmds1, rmds2, rmds3}
 
-	start, stop := MetadataRevision(200), MetadataRevision(202)
 	config.mockMdserv.EXPECT().GetRange(ctx, rmds1.MD.ID, NullBranchID, Merged, start,
 		stop).Return(allRMDSs, nil)
 
-	_, err := config.MDOps().GetRange(ctx, rmds1.MD.ID, start, stop)
-	if err == nil {
-		t.Errorf("Got no expected error on GetRange")
-	} else if _, ok := err.(MDMismatchError); !ok {
-		t.Errorf("Got unexpected error on GetRange with final non-head revision: %v",
-			err)
-	}
+	_, err = config.MDOps().GetRange(ctx, rmds1.MD.ID, start, stop)
+	require.IsType(t, MDMismatchError{}, err)
 }

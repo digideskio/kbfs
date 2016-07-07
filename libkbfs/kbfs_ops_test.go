@@ -261,9 +261,6 @@ func injectNewRMD(t *testing.T, config *ConfigMock) (
 			EncodedSize: 1,
 		},
 	}
-	// Need to do this to avoid multiple calls to the mocked-out
-	// MakeMdID above, leading to confusion.
-	rmd.mdID = fakeMdID(fakeTlfIDByte(id))
 	FakeInitialRekey(rmd, h.ToBareHandleOrBust())
 
 	ops := getOps(config, id)

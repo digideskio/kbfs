@@ -7,7 +7,6 @@ package libkbfs
 import (
 	"reflect"
 	"sort"
-	"sync"
 	"testing"
 
 	"github.com/keybase/client/go/libkb"
@@ -439,8 +438,6 @@ func makeFakeRootMetadataFuture(t *testing.T) *rootMetadataFuture {
 				codec.UnknownFieldSetHandler{},
 				PrivateMetadata{},
 				nil,
-				sync.RWMutex{},
-				MdID{},
 			},
 		},
 		[]*tlfReaderKeyBundleFuture{&rkb},

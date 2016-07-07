@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/keybase/client/go/libkb"
@@ -167,10 +166,6 @@ type RootMetadata struct {
 	// The TLF handle for this MD. May be nil if this object was
 	// deserialized (more common on the server side).
 	tlfHandle *TlfHandle
-
-	// The cached ID for this MD structure (hash)
-	mdIDLock sync.RWMutex
-	mdID     MdID
 }
 
 func (md *RootMetadata) haveOnlyUserRKeysChanged(codec Codec, prevMD *RootMetadata, user keybase1.UID) (bool, error) {
@@ -357,8 +352,6 @@ func (md *RootMetadata) deepCopyInPlace(codec Codec, copyHandle bool,
 	if copyHandle {
 		newMd.tlfHandle = md.tlfHandle.deepCopy()
 	}
-
-	// No need to copy mdID.
 
 	return nil
 }
@@ -658,31 +651,11 @@ func (md *RootMetadata) IsInitialized() bool {
 
 // MetadataID computes and caches the MdID for this RootMetadata
 func (md *RootMetadata) MetadataID(crypto cryptoPure) (MdID, error) {
-	mdID := func() MdID {
-		md.mdIDLock.RLock()
-		defer md.mdIDLock.RUnlock()
-		return md.mdID
-	}()
-	if mdID != (MdID{}) {
-		return mdID, nil
-	}
-
-	mdID, err := crypto.MakeMdID(md)
-	if err != nil {
-		return MdID{}, err
-	}
-
-	md.mdIDLock.Lock()
-	defer md.mdIDLock.Unlock()
-	md.mdID = mdID
-	return mdID, nil
+	return crypto.MakeMdID(md)
 }
 
 // clearMetadataID forgets the cached version of the RootMetadata's MdID
 func (md *RootMetadata) clearCachedMetadataIDForTest() {
-	md.mdIDLock.Lock()
-	defer md.mdIDLock.Unlock()
-	md.mdID = MdID{}
 }
 
 // AddRefBlock adds the newly-referenced block to the add block change list.
