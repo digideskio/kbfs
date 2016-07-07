@@ -519,7 +519,7 @@ func (fbo *folderBranchOps) setHeadLocked(
 	isFirstHead := fbo.head == nil
 	wasReadable := !isFirstHead && fbo.head.IsReadable()
 
-	headID, err := md.MetadataID(fbo.config.Crypto())
+	headID, err := fbo.config.Crypto().MakeMdID(md)
 	if err != nil {
 		return err
 	}
@@ -686,7 +686,7 @@ func (fbo *folderBranchOps) setHeadPredecessorLocked(ctx context.Context,
 		return errors.New("Unexpected merged head in setHeadPredecessorLocked")
 	}
 
-	mdID, err := md.MetadataID(fbo.config.Crypto())
+	mdID, err := fbo.config.Crypto().MakeMdID(md)
 	if err != nil {
 		return err
 	}

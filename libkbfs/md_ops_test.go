@@ -499,14 +499,14 @@ func testMDOpsGetRangeSuccess(t *testing.T, fromStart bool) {
 	rmds1.MD.PrevRoot = fakeMdID(42)
 	rmds1.MD.SerializedPrivateMetadata = []byte{1}
 	rmds1.MD.Revision = 100
-	rmds1ID, err := rmds1.MD.MetadataID(c)
+	rmds1ID, err := c.MakeMdID(&rmds1.MD)
 	require.NoError(t, err)
 
 	rmds2 := newRMDS(t, config, false)
 	rmds2.MD.PrevRoot = rmds1ID
 	rmds2.MD.SerializedPrivateMetadata = []byte{1}
 	rmds2.MD.Revision = 101
-	rmds2ID, err := rmds2.MD.MetadataID(c)
+	rmds2ID, err := c.MakeMdID(&rmds2.MD)
 	require.NoError(t, err)
 
 	rmds3 := newRMDS(t, config, false)
@@ -566,7 +566,7 @@ func TestMDOpsGetRangeFailBadPrevRoot(t *testing.T) {
 	rmds2.MD.PrevRoot = fakeMdID(43)
 	rmds2.MD.SerializedPrivateMetadata = []byte{1}
 	rmds2.MD.Revision = 101
-	rmds2ID, err := rmds2.MD.MetadataID(c)
+	rmds2ID, err := c.MakeMdID(&rmds2.MD)
 	require.NoError(t, err)
 
 	rmds3 := newRMDS(t, config, false)
@@ -724,7 +724,7 @@ func TestMDOpsGetRangeFailFinal(t *testing.T) {
 	rmds1.MD.PrevRoot = fakeMdID(42)
 	rmds1.MD.SerializedPrivateMetadata = []byte{1}
 	rmds1.MD.Revision = 100
-	rmds1ID, err := rmds1.MD.MetadataID(c)
+	rmds1ID, err := c.MakeMdID(&rmds1.MD)
 	require.NoError(t, err)
 
 	rmds2 := newRMDS(t, config, false)
@@ -732,7 +732,7 @@ func TestMDOpsGetRangeFailFinal(t *testing.T) {
 	rmds2.MD.SerializedPrivateMetadata = []byte{1}
 	rmds2.MD.Revision = 101
 	rmds2.MD.Flags |= MetadataFlagFinal
-	rmds2ID, err := rmds2.MD.MetadataID(c)
+	rmds2ID, err := c.MakeMdID(&rmds2.MD)
 	require.NoError(t, err)
 
 	rmds3 := newRMDS(t, config, false)

@@ -371,7 +371,7 @@ func (md *MDServerMemory) Put(ctx context.Context, rmds *RootMetadataSigned) err
 
 	// Consistency checks
 	if head != nil {
-		currID, err := head.MD.MetadataID(md.config.Crypto())
+		currID, err := md.config.Crypto().MakeMdID(&head.MD)
 		if err != nil {
 			return err
 		}

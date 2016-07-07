@@ -649,15 +649,6 @@ func (md *RootMetadata) IsInitialized() bool {
 	return keyGen >= FirstValidKeyGen
 }
 
-// MetadataID computes and caches the MdID for this RootMetadata
-func (md *RootMetadata) MetadataID(crypto cryptoPure) (MdID, error) {
-	return crypto.MakeMdID(md)
-}
-
-// clearMetadataID forgets the cached version of the RootMetadata's MdID
-func (md *RootMetadata) clearCachedMetadataIDForTest() {
-}
-
 // AddRefBlock adds the newly-referenced block to the add block change list.
 func (md *RootMetadata) AddRefBlock(info BlockInfo) {
 	md.RefBytes += uint64(info.EncodedSize)

@@ -366,7 +366,7 @@ func (md *MDOpsStandard) processRange(ctx context.Context, id TlfID,
 		}
 
 		if prevMD != nil {
-			prevID, err := prevMD.MetadataID(md.config.Crypto())
+			prevID, err := md.config.Crypto().MakeMdID(prevMD)
 			if err != nil {
 				return nil, err
 			}

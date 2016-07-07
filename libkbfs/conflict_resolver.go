@@ -2269,7 +2269,7 @@ func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 	// Add a final dummy operation to collect all of the block updates.
 	newMD.AddOp(newResolutionOp())
 
-	prevRoot, err := currMD.MetadataID(cr.config.Crypto())
+	prevRoot, err := cr.config.Crypto().MakeMdID(currMD)
 	if err != nil {
 		return MdID{}, nil, err
 	}
