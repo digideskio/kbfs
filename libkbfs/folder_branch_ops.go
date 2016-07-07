@@ -4013,7 +4013,7 @@ func (fbo *folderBranchOps) backgroundFlusher(betweenFlushes time.Duration) {
 // out the given newOps notifications locally.  This is used for
 // completing conflict resolution.
 func (fbo *folderBranchOps) finalizeResolution(ctx context.Context,
-	lState *lockState, md *RootMetadata, bps *blockPutState,
+	lState *lockState, prevMd, md *RootMetadata, bps *blockPutState,
 	newOps []op) error {
 	// Take the writer lock.
 	fbo.mdWriterLock.Lock(lState)
@@ -4033,11 +4033,9 @@ func (fbo *folderBranchOps) finalizeResolution(ctx context.Context,
 	default:
 	}
 
-	head := fbo.getHead(lState)
-
 	// Put the MD.  If there's a conflict, abort the whole process and
 	// let CR restart itself.
-	err = fbo.config.MDOps().Put(ctx, head, md)
+	err = fbo.config.MDOps().Put(ctx, prevMd, md)
 	doUnmergedPut := fbo.isRevisionConflict(err)
 	if doUnmergedPut {
 		fbo.log.CDebugf(ctx, "Got a conflict after resolution; aborting CR")

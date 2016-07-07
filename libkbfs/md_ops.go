@@ -474,6 +474,19 @@ func (md *MDOpsStandard) readyMD(ctx context.Context, prevRmd, rmd *RootMetadata
 	// Record the last user to modify this metadata
 	rmd.LastModifyingUser = me
 
+	if prevRmd != nil {
+		prevRoot, err := prevRmd.MetadataID(crypto)
+		if err != nil {
+			return nil, err
+		}
+
+		if prevRoot != rmd.PrevRoot {
+			panic(fmt.Sprintf("Expected %s, got %s", rmd.PrevRoot, prevRoot))
+		}
+
+		rmd.PrevRoot = prevRoot
+	}
+
 	// encode the root metadata and sign it
 	buf, err := codec.Encode(rmd)
 	if err != nil {
