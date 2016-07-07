@@ -2084,8 +2084,8 @@ func (_mr *_MockMDOpsRecorder) GetUnmergedRange(arg0, arg1, arg2, arg3, arg4 int
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUnmergedRange", arg0, arg1, arg2, arg3, arg4)
 }
 
-func (_m *MockMDOps) Put(ctx context.Context, prevRmd *RootMetadata, rmd *RootMetadata) error {
-	ret := _m.ctrl.Call(_m, "Put", ctx, prevRmd, rmd)
+func (_m *MockMDOps) Put(ctx context.Context, prevRoot MdID, rmd *RootMetadata) error {
+	ret := _m.ctrl.Call(_m, "Put", ctx, prevRoot, rmd)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -2094,8 +2094,8 @@ func (_mr *_MockMDOpsRecorder) Put(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Put", arg0, arg1, arg2)
 }
 
-func (_m *MockMDOps) PutUnmerged(ctx context.Context, prevRmd *RootMetadata, rmd *RootMetadata, bid BranchID) error {
-	ret := _m.ctrl.Call(_m, "PutUnmerged", ctx, prevRmd, rmd, bid)
+func (_m *MockMDOps) PutUnmerged(ctx context.Context, prevRoot MdID, rmd *RootMetadata, bid BranchID) error {
+	ret := _m.ctrl.Call(_m, "PutUnmerged", ctx, prevRoot, rmd, bid)
 	ret0, _ := ret[0].(error)
 	return ret0
 }

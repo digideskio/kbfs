@@ -420,7 +420,7 @@ func (md *MDOpsStandard) GetUnmergedRange(ctx context.Context, id TlfID,
 	return md.getRange(ctx, id, bid, Unmerged, start, stop)
 }
 
-func (md *MDOpsStandard) readyMD(ctx context.Context, prevRmd, rmd *RootMetadata) (
+func (md *MDOpsStandard) readyMD(ctx context.Context, prevRoot MdID, rmd *RootMetadata) (
 	rms *RootMetadataSigned, err error) {
 	_, me, err := md.config.KBPKI().GetCurrentUserInfo(ctx)
 	if err != nil {
@@ -474,18 +474,11 @@ func (md *MDOpsStandard) readyMD(ctx context.Context, prevRmd, rmd *RootMetadata
 	// Record the last user to modify this metadata
 	rmd.LastModifyingUser = me
 
-	if prevRmd != nil {
-		prevRoot, err := prevRmd.MetadataID(crypto)
-		if err != nil {
-			return nil, err
-		}
-
-		if rmd.PrevRoot != (MdID{}) && prevRoot != rmd.PrevRoot {
-			panic(fmt.Errorf("Expected %s, got %s", rmd.PrevRoot, prevRoot))
-		}
-
-		rmd.PrevRoot = prevRoot
+	if rmd.PrevRoot != (MdID{}) && prevRoot != rmd.PrevRoot {
+		panic(fmt.Errorf("Expected %s, got %s", rmd.PrevRoot, prevRoot))
 	}
+
+	rmd.PrevRoot = prevRoot
 
 	// encode the root metadata and sign it
 	buf, err := codec.Encode(rmd)
@@ -509,8 +502,8 @@ func (md *MDOpsStandard) readyMD(ctx context.Context, prevRmd, rmd *RootMetadata
 	return rmds, nil
 }
 
-func (md *MDOpsStandard) put(ctx context.Context, prevRmd, rmd *RootMetadata) error {
-	rmds, err := md.readyMD(ctx, prevRmd, rmd)
+func (md *MDOpsStandard) put(ctx context.Context, prevRoot MdID, rmd *RootMetadata) error {
+	rmds, err := md.readyMD(ctx, prevRoot, rmd)
 	if err != nil {
 		return err
 	}
@@ -522,18 +515,18 @@ func (md *MDOpsStandard) put(ctx context.Context, prevRmd, rmd *RootMetadata) er
 }
 
 // Put implements the MDOps interface for MDOpsStandard.
-func (md *MDOpsStandard) Put(ctx context.Context, prevRmd, rmd *RootMetadata) error {
+func (md *MDOpsStandard) Put(ctx context.Context, prevRoot MdID, rmd *RootMetadata) error {
 	if rmd.MergedStatus() == Unmerged {
 		return UnexpectedUnmergedPutError{}
 	}
-	return md.put(ctx, prevRmd, rmd)
+	return md.put(ctx, prevRoot, rmd)
 }
 
 // PutUnmerged implements the MDOps interface for MDOpsStandard.
-func (md *MDOpsStandard) PutUnmerged(ctx context.Context, prevRmd, rmd *RootMetadata, bid BranchID) error {
+func (md *MDOpsStandard) PutUnmerged(ctx context.Context, prevRoot MdID, rmd *RootMetadata, bid BranchID) error {
 	rmd.WFlags |= MetadataFlagUnmerged
 	rmd.BID = bid
-	return md.put(ctx, prevRmd, rmd)
+	return md.put(ctx, prevRoot, rmd)
 }
 
 // GetLatestHandleForTLF implements the MDOps interface for MDOpsStandard.

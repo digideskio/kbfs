@@ -2180,11 +2180,11 @@ func (cr *ConflictResolver) makeRevertedOps(ctx context.Context,
 // the other operations.
 func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 	lState *lockState, unmergedPaths []path, unmergedChains *crChains,
-	mergedChains *crChains) (*RootMetadata, *RootMetadata, error) {
+	mergedChains *crChains) (MdID, *RootMetadata, error) {
 	currMD := mergedChains.mostRecentMD
 	newMD, err := currMD.MakeSuccessor(cr.config, true)
 	if err != nil {
-		return nil, nil, err
+		return MdID{}, nil, err
 	}
 
 	// We also need to add in any creates that happened within
@@ -2226,7 +2226,7 @@ func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 				ptr, err :=
 					unmergedChains.mostRecentFromOriginalOrSame(cop.Refs()[0])
 				if err != nil {
-					return nil, nil, err
+					return MdID{}, nil, err
 				}
 				file := path{
 					FolderBranch: cr.fbo.folderBranch,
@@ -2235,7 +2235,7 @@ func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 				fblock, err := cr.fbo.blocks.GetFileBlockForReading(ctx, lState,
 					unmergedChains.mostRecentMD, ptr, file.Branch, file)
 				if err != nil {
-					return nil, nil, err
+					return MdID{}, nil, err
 				}
 				if fblock.IsInd {
 					newCreateOp.RefBlocks = make([]BlockPointer,
@@ -2257,7 +2257,7 @@ func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 	ops, err := cr.makeRevertedOps(
 		ctx, lState, unmergedPaths, unmergedChains, mergedChains)
 	if err != nil {
-		return nil, nil, err
+		return MdID{}, nil, err
 	}
 
 	cr.log.CDebugf(ctx, "Remote notifications: %v", ops)
@@ -2269,7 +2269,12 @@ func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 	// Add a final dummy operation to collect all of the block updates.
 	newMD.AddOp(newResolutionOp())
 
-	return currMD, newMD, nil
+	prevRoot, err := currMD.MetadataID(cr.config.Crypto())
+	if err != nil {
+		return MdID{}, nil, err
+	}
+
+	return prevRoot, newMD, nil
 }
 
 // crFixOpPointers takes in a slice of "reverted" ops (all referring
@@ -3090,7 +3095,7 @@ func (cr *ConflictResolver) getOpsForLocalNotification(ctx context.Context,
 // resolution visible to any nodes on the merged branch, and taking
 // the local node out of staged mode.
 func (cr *ConflictResolver) finalizeResolution(ctx context.Context,
-	lState *lockState, prevMd, md *RootMetadata, unmergedChains *crChains,
+	lState *lockState, prevRoot MdID, md *RootMetadata, unmergedChains *crChains,
 	mergedChains *crChains, updates map[BlockPointer]BlockPointer,
 	bps *blockPutState) error {
 	// Fix up all the block pointers in the merged ops to work well
@@ -3106,7 +3111,7 @@ func (cr *ConflictResolver) finalizeResolution(ctx context.Context,
 
 	cr.log.CDebugf(ctx, "Local notifications: %v", newOps)
 
-	return cr.fbo.finalizeResolution(ctx, lState, prevMd, md, bps, newOps)
+	return cr.fbo.finalizeResolution(ctx, lState, prevRoot, md, bps, newOps)
 }
 
 // completeResolution pushes all the resolved blocks to the servers,

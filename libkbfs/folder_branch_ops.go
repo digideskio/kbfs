@@ -988,7 +988,7 @@ func (fbo *folderBranchOps) initMDLocked(
 	}
 
 	// finally, write out the new metadata
-	if err = fbo.config.MDOps().Put(ctx, nil, md); err != nil {
+	if err = fbo.config.MDOps().Put(ctx, MdID{}, md); err != nil {
 		return err
 	}
 
@@ -1779,13 +1779,17 @@ func (fbo *folderBranchOps) finalizeMDWriteLocked(ctx context.Context,
 	mdops := fbo.config.MDOps()
 
 	head := fbo.getHead(lState)
+	prevRoot, err := head.MetadataID(fbo.config.Crypto())
+	if err != nil {
+		return err
+	}
 
 	doUnmergedPut, wasMasterBranch := true, fbo.isMasterBranchLocked(lState)
 	mergedRev := MetadataRevisionUninitialized
 
 	if fbo.isMasterBranchLocked(lState) {
 		// only do a normal Put if we're not already staged.
-		err = mdops.Put(ctx, head, md)
+		err = mdops.Put(ctx, prevRoot, md)
 
 		if doUnmergedPut = fbo.isRevisionConflict(err); doUnmergedPut {
 			fbo.log.CDebugf(ctx, "Conflict: %v", err)
@@ -1808,7 +1812,7 @@ func (fbo *folderBranchOps) finalizeMDWriteLocked(ctx context.Context,
 		} else {
 			bid = fbo.bid
 		}
-		err := mdops.PutUnmerged(ctx, head, md, bid)
+		err := mdops.PutUnmerged(ctx, prevRoot, md, bid)
 		if err != nil {
 			// TODO: if this is a conflict error, we should try to
 			// fast-forward to the most recent revision after
@@ -1859,9 +1863,13 @@ func (fbo *folderBranchOps) finalizeMDRekeyWriteLocked(ctx context.Context,
 	fbo.mdWriterLock.AssertLocked(lState)
 
 	head := fbo.getHead(lState)
+	prevRoot, err := head.MetadataID(fbo.config.Crypto())
+	if err != nil {
+		return err
+	}
 
 	// finally, write out the new metadata
-	err = fbo.config.MDOps().Put(ctx, head, md)
+	err = fbo.config.MDOps().Put(ctx, prevRoot, md)
 	isConflict := fbo.isRevisionConflict(err)
 	if err != nil && !isConflict {
 		return err
@@ -1933,9 +1941,13 @@ func (fbo *folderBranchOps) finalizeGCOp(ctx context.Context, gco *gcOp) (
 	}
 
 	head := fbo.getHead(lState)
+	prevRoot, err := head.MetadataID(fbo.config.Crypto())
+	if err != nil {
+		return err
+	}
 
 	// finally, write out the new metadata
-	err = fbo.config.MDOps().Put(ctx, head, md)
+	err = fbo.config.MDOps().Put(ctx, prevRoot, md)
 	if err != nil {
 		// Don't allow garbage collection to put us into a conflicting
 		// state; just wait for the next period.
@@ -4013,7 +4025,7 @@ func (fbo *folderBranchOps) backgroundFlusher(betweenFlushes time.Duration) {
 // out the given newOps notifications locally.  This is used for
 // completing conflict resolution.
 func (fbo *folderBranchOps) finalizeResolution(ctx context.Context,
-	lState *lockState, prevMd, md *RootMetadata, bps *blockPutState,
+	lState *lockState, prevRoot MdID, md *RootMetadata, bps *blockPutState,
 	newOps []op) error {
 	// Take the writer lock.
 	fbo.mdWriterLock.Lock(lState)
@@ -4035,7 +4047,7 @@ func (fbo *folderBranchOps) finalizeResolution(ctx context.Context,
 
 	// Put the MD.  If there's a conflict, abort the whole process and
 	// let CR restart itself.
-	err = fbo.config.MDOps().Put(ctx, prevMd, md)
+	err = fbo.config.MDOps().Put(ctx, prevRoot, md)
 	doUnmergedPut := fbo.isRevisionConflict(err)
 	if doUnmergedPut {
 		fbo.log.CDebugf(ctx, "Got a conflict after resolution; aborting CR")

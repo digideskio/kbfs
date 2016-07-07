@@ -458,7 +458,7 @@ func testKBFSOpsGetRootNodeCreateNewSuccess(t *testing.T, public bool) {
 	// now cache and put everything
 	config.mockBops.EXPECT().Put(ctx, rmd, ptrMatcher{rootPtr}, readyBlockData).
 		Return(nil)
-	config.mockMdops.EXPECT().Put(gomock.Any(), nil, rmd).Return(nil)
+	config.mockMdops.EXPECT().Put(gomock.Any(), MdID{}, rmd).Return(nil)
 	config.mockMdcache.EXPECT().Put(rmd).Return(nil)
 
 	ops := getOps(config, id)
@@ -1041,32 +1041,17 @@ func expectSyncBlockHelper(
 			}
 			config.mockMdops.EXPECT().PutUnmerged(
 				gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				Do(func(ctx context.Context, prevRmd, rmd *RootMetadata, bid BranchID) {
+				Do(func(ctx context.Context, prevRoot MdID, rmd *RootMetadata, bid BranchID) {
 					// add some serialized metadata to satisfy the check
 					rmd.SerializedPrivateMetadata = make([]byte, 1)
-					if prevRmd != nil {
-						prevRoot, err := prevRmd.MetadataID(config.Crypto())
-						if err != nil {
-							panic(err)
-						}
-
-						rmd.PrevRoot = prevRoot
-					}
+					rmd.PrevRoot = prevRoot
 				}).Return(nil)
 		} else {
 			config.mockMdops.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any()).
-				Do(func(ctx context.Context, prevRmd, rmd *RootMetadata) {
+				Do(func(ctx context.Context, prevRoot MdID, rmd *RootMetadata) {
 					// add some serialized metadata to satisfy the check
 					rmd.SerializedPrivateMetadata = make([]byte, 1)
-
-					if prevRmd != nil {
-						prevRoot, err := prevRmd.MetadataID(config.Crypto())
-						if err != nil {
-							panic(err)
-						}
-
-						rmd.PrevRoot = prevRoot
-					}
+					rmd.PrevRoot = prevRoot
 				}).Return(nil)
 		}
 		config.mockMdcache.EXPECT().Put(gomock.Any()).
