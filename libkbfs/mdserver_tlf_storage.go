@@ -364,7 +364,12 @@ func (s *mdServerTlfStorage) put(
 
 	// Consistency checks
 	if head != nil {
-		err := head.MD.CheckValidSuccessorForServer(s.crypto, &rmds.MD)
+		currID, err := head.MD.MetadataID(s.crypto)
+		if err != nil {
+			return false, err
+		}
+
+		err = head.MD.CheckValidSuccessorForServer(currID, &rmds.MD)
 		if err != nil {
 			return false, err
 		}

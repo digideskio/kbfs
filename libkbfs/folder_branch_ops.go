@@ -603,7 +603,12 @@ func (fbo *folderBranchOps) setHeadSuccessorLocked(ctx context.Context,
 		return fbo.setInitialHeadTrustedLocked(ctx, lState, md)
 	}
 
-	err := fbo.head.CheckValidSuccessor(fbo.config.Crypto(), md)
+	currID, err := fbo.head.MetadataID(fbo.config.Crypto())
+	if err != nil {
+		return err
+	}
+
+	err = fbo.head.CheckValidSuccessor(currID, md)
 	if err != nil {
 		return err
 	}
@@ -673,7 +678,12 @@ func (fbo *folderBranchOps) setHeadPredecessorLocked(ctx context.Context,
 		return errors.New("Unexpected merged head in setHeadPredecessorLocked")
 	}
 
-	err := md.CheckValidSuccessor(fbo.config.Crypto(), fbo.head)
+	mdID, err := md.MetadataID(fbo.config.Crypto())
+	if err != nil {
+		return err
+	}
+
+	err = md.CheckValidSuccessor(mdID, fbo.head)
 	if err != nil {
 		return err
 	}

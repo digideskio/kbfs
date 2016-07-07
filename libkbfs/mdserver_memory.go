@@ -371,8 +371,12 @@ func (md *MDServerMemory) Put(ctx context.Context, rmds *RootMetadataSigned) err
 
 	// Consistency checks
 	if head != nil {
-		err := head.MD.CheckValidSuccessorForServer(
-			md.config.Crypto(), &rmds.MD)
+		currID, err := head.MD.MetadataID(md.config.Crypto())
+		if err != nil {
+			return err
+		}
+
+		err = head.MD.CheckValidSuccessorForServer(currID, &rmds.MD)
 		if err != nil {
 			return err
 		}

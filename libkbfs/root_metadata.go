@@ -407,7 +407,7 @@ func (md *RootMetadata) MakeSuccessor(config Config, isWriter bool) (*RootMetada
 // CheckValidSuccessor makes sure the given RootMetadata is a valid
 // successor to the current one, and returns an error otherwise.
 func (md *RootMetadata) CheckValidSuccessor(
-	crypto cryptoPure, nextMd *RootMetadata) error {
+	currID MdID, nextMd *RootMetadata) error {
 	// (1) Verify current metadata is non-final.
 	if md.IsFinal() {
 		return MetadataIsFinalError{}
@@ -430,14 +430,10 @@ func (md *RootMetadata) CheckValidSuccessor(
 	}
 
 	// (3) Check PrevRoot pointer.
-	currRoot, err := md.MetadataID(crypto)
-	if err != nil {
-		return err
-	}
-	if nextMd.PrevRoot != currRoot {
+	if nextMd.PrevRoot != currID {
 		return MDPrevRootMismatch{
 			prevRoot: nextMd.PrevRoot,
-			currRoot: currRoot,
+			currRoot: currID,
 		}
 	}
 
@@ -461,8 +457,8 @@ func (md *RootMetadata) CheckValidSuccessor(
 // CheckValidSuccessorForServer is like CheckValidSuccessor but with
 // server-specific error messages.
 func (md *RootMetadata) CheckValidSuccessorForServer(
-	crypto cryptoPure, nextMd *RootMetadata) error {
-	err := md.CheckValidSuccessor(crypto, nextMd)
+	currID MdID, nextMd *RootMetadata) error {
+	err := md.CheckValidSuccessor(currID, nextMd)
 	switch err := err.(type) {
 	case nil:
 		break
