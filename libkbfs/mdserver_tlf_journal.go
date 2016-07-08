@@ -448,6 +448,8 @@ func (s *mdServerTlfJournal) flushOne(
 
 			// TODO: Do the below atomically.
 
+			var prevID MdID
+
 			for i, id := range allMdIDs {
 				rmd, err := s.getMDReadLocked(id)
 				if err != nil {
@@ -455,6 +457,10 @@ func (s *mdServerTlfJournal) flushOne(
 				}
 				rmd.WFlags |= MetadataFlagUnmerged
 				rmd.BID = bid
+
+				if i > 0 {
+					rmd.PrevRoot = prevID
+				}
 
 				err = s.putMDLocked(rmd, currentUID)
 				if err != nil {
@@ -476,6 +482,8 @@ func (s *mdServerTlfJournal) flushOne(
 				if err != nil {
 					return false, err
 				}
+
+				prevID = newID
 
 				log.Debug("Changing ID for rev=%s from %s to %s",
 					rev, id, newID)
