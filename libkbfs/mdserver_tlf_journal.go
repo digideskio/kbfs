@@ -436,7 +436,7 @@ func (s *mdServerTlfJournal) flushOne(
 			log.Debug("Conflict detected %v; rewriting MDs %s to %s",
 				err, earliestRevision, latestRevision)
 
-			start, allMdIDs, err := s.j.getRange(earliestRevision, latestRevision)
+			_, allMdIDs, err := s.j.getRange(earliestRevision, latestRevision)
 			if err != nil {
 				return false, err
 			}
@@ -460,7 +460,10 @@ func (s *mdServerTlfJournal) flushOne(
 				rmd.WFlags |= MetadataFlagUnmerged
 				rmd.BID = bid
 
+				log.Debug("Old prev root of rev=%s is %s", rmd.Revision, rmd.PrevRoot)
+
 				if i > 0 {
+					log.Debug("Changing prev root of rev=%s to %s", rmd.Revision, prevID)
 					rmd.PrevRoot = prevID
 				}
 
@@ -469,8 +472,7 @@ func (s *mdServerTlfJournal) flushOne(
 					return false, err
 				}
 
-				rev := start + MetadataRevision(i)
-				o, err := revisionToOrdinal(rev)
+				o, err := revisionToOrdinal(rmd.Revision)
 				if err != nil {
 					return false, err
 				}
@@ -488,7 +490,7 @@ func (s *mdServerTlfJournal) flushOne(
 				prevID = newID
 
 				log.Debug("Changing ID for rev=%s from %s to %s",
-					rev, id, newID)
+					rmd.Revision, id, newID)
 			}
 
 			earliestID, err := s.j.getEarliest()
