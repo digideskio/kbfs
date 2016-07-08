@@ -195,7 +195,7 @@ func MakeConstRootMetadata(rmd *RootMetadata) ConstRootMetadata {
 	return ConstRootMetadata{rmd}
 }
 
-func (md *BareRootMetadata) haveOnlyUserRKeysChanged(codec Codec, prevMD *RootMetadata, user keybase1.UID) (bool, error) {
+func (md *BareRootMetadata) haveOnlyUserRKeysChanged(codec Codec, prevMD *BareRootMetadata, user keybase1.UID) (bool, error) {
 	// Require the same number of generations
 	if len(md.RKeys) != len(prevMD.RKeys) {
 		return false, nil
@@ -223,7 +223,7 @@ func (md *BareRootMetadata) haveOnlyUserRKeysChanged(codec Codec, prevMD *RootMe
 
 // IsValidRekeyRequest returns true if the current block is a simple rekey wrt
 // the passed block.
-func (md *BareRootMetadata) IsValidRekeyRequest(codec Codec, prevMd *RootMetadata, user keybase1.UID) (bool, error) {
+func (md *BareRootMetadata) IsValidRekeyRequest(codec Codec, prevMd *BareRootMetadata, user keybase1.UID) (bool, error) {
 	if !md.IsWriterMetadataCopiedSet() {
 		// Not a copy.
 		return false, nil
@@ -309,7 +309,7 @@ func (md *BareRootMetadata) IsReader(user keybase1.UID, deviceKID keybase1.KID) 
 // RootMetadata object with the given TlfID and TlfHandle. Note that
 // if the given ID/handle are private, rekeying must be done
 // separately.
-func updateNewRootMetadata(rmd *RootMetadata, id TlfID, h BareTlfHandle) error {
+func updateNewRootMetadata(rmd *BareRootMetadata, id TlfID, h BareTlfHandle) error {
 	if id.IsPublic() != h.IsPublic() {
 		return errors.New("TlfID and TlfHandle disagree on public status")
 	}
@@ -357,6 +357,21 @@ func (md *RootMetadata) clearLastRevision() {
 	md.ClearBlockChanges()
 	// remove the copied flag (if any.)
 	md.Flags &= ^MetadataFlagWriterMetadataCopied
+}
+
+func (md *BareRootMetadata) deepCopy(codec Codec) (*BareRootMetadata, error) {
+	var newMd BareRootMetadata
+	if err := md.deepCopyInPlace(codec, &newMd); err != nil {
+		return nil, err
+	}
+	return &newMd, nil
+}
+
+func (md *BareRootMetadata) deepCopyInPlace(codec Codec, newMd *BareRootMetadata) error {
+	if err := CodecUpdate(codec, newMd, md); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (md *RootMetadata) deepCopy(codec Codec, copyHandle bool) (*RootMetadata, error) {
@@ -430,8 +445,8 @@ func (md *RootMetadata) MakeSuccessor(config Config, isWriter bool) (*RootMetada
 
 // CheckValidSuccessor makes sure the given RootMetadata is a valid
 // successor to the current one, and returns an error otherwise.
-func (md *RootMetadata) CheckValidSuccessor(
-	crypto cryptoPure, nextMd *RootMetadata) error {
+func (md *BareRootMetadata) CheckValidSuccessor(
+	currID MdID, nextMd *BareRootMetadata) error {
 	// (1) Verify current metadata is non-final.
 	if md.IsFinal() {
 		return MetadataIsFinalError{}
@@ -454,14 +469,10 @@ func (md *RootMetadata) CheckValidSuccessor(
 	}
 
 	// (3) Check PrevRoot pointer.
-	currRoot, err := md.MetadataID(crypto)
-	if err != nil {
-		return err
-	}
-	if nextMd.PrevRoot != currRoot {
+	if nextMd.PrevRoot != currID {
 		return MDPrevRootMismatch{
 			prevRoot: nextMd.PrevRoot,
-			currRoot: currRoot,
+			currRoot: currID,
 		}
 	}
 
@@ -482,11 +493,23 @@ func (md *RootMetadata) CheckValidSuccessor(
 	return nil
 }
 
+// CheckValidSuccessor makes sure the given RootMetadata is a valid
+// successor to the current one, and returns an error otherwise.
+func (md *RootMetadata) CheckValidSuccessor(
+	crypto cryptoPure, nextMd *RootMetadata) error {
+	currID, err := md.MetadataID(crypto)
+	if err != nil {
+		return err
+	}
+
+	return md.BareRootMetadata.CheckValidSuccessor(currID, &nextMd.BareRootMetadata)
+}
+
 // CheckValidSuccessorForServer is like CheckValidSuccessor but with
 // server-specific error messages.
-func (md *RootMetadata) CheckValidSuccessorForServer(
-	crypto cryptoPure, nextMd *RootMetadata) error {
-	err := md.CheckValidSuccessor(crypto, nextMd)
+func (md *BareRootMetadata) CheckValidSuccessorForServer(
+	currID MdID, nextMd *BareRootMetadata) error {
+	err := md.CheckValidSuccessor(currID, nextMd)
 	switch err := err.(type) {
 	case nil:
 		break
@@ -597,7 +620,7 @@ func (md *RootMetadata) GetTLFEphemeralPublicKey(
 }
 
 // LatestKeyGeneration returns the newest key generation for this RootMetadata.
-func (md *RootMetadata) LatestKeyGeneration() KeyGen {
+func (md *BareRootMetadata) LatestKeyGeneration() KeyGen {
 	if md.ID.IsPublic() {
 		return PublicKeyGen
 	}
@@ -625,7 +648,7 @@ func (md *RootMetadata) GetTlfHandle() *TlfHandle {
 	return md.tlfHandle
 }
 
-func (md *RootMetadata) makeBareTlfHandle() (BareTlfHandle, error) {
+func (md *BareRootMetadata) makeBareTlfHandle() (BareTlfHandle, error) {
 	var writers, readers []keybase1.UID
 	if md.ID.IsPublic() {
 		writers = md.Writers
@@ -666,12 +689,18 @@ func (md *RootMetadata) makeBareTlfHandle() (BareTlfHandle, error) {
 
 // MakeBareTlfHandle makes a BareTlfHandle for this
 // RootMetadata. Should be used only by servers and MDOps.
+func (md *BareRootMetadata) MakeBareTlfHandle() (BareTlfHandle, error) {
+	return md.makeBareTlfHandle()
+}
+
+// MakeBareTlfHandle makes a BareTlfHandle for this
+// RootMetadata. Should be used only by servers and MDOps.
 func (md *RootMetadata) MakeBareTlfHandle() (BareTlfHandle, error) {
 	if md.tlfHandle != nil {
 		panic(errors.New("MakeBareTlfHandle called when md.tlfHandle exists"))
 	}
 
-	return md.makeBareTlfHandle()
+	return md.BareRootMetadata.MakeBareTlfHandle()
 }
 
 // IsInitialized returns whether or not this RootMetadata has been initialized
@@ -779,13 +808,13 @@ func (md *RootMetadata) isReadableOrError(ctx context.Context, config Config) er
 }
 
 // writerKID returns the KID of the writer.
-func (md *RootMetadata) writerKID() keybase1.KID {
+func (md *BareRootMetadata) writerKID() keybase1.KID {
 	return md.WriterMetadataSigInfo.VerifyingKey.KID()
 }
 
 // VerifyWriterMetadata verifies md's WriterMetadata against md's
 // WriterMetadataSigInfo, assuming the verifying key there is valid.
-func (md *RootMetadata) VerifyWriterMetadata(codec Codec, crypto Crypto) error {
+func (md *BareRootMetadata) VerifyWriterMetadata(codec Codec, crypto Crypto) error {
 	// We have to re-marshal the WriterMetadata, since it's
 	// embedded.
 	buf, err := codec.Encode(md.WriterMetadata)
@@ -856,7 +885,7 @@ func (md *RootMetadata) swapCachedBlockChanges() {
 }
 
 // TlfHandleExtensions returns a list of handle extensions associated with the TLf.
-func (md *RootMetadata) TlfHandleExtensions() (extensions []TlfHandleExtension) {
+func (md *BareRootMetadata) TlfHandleExtensions() (extensions []TlfHandleExtension) {
 	if md.ConflictInfo != nil {
 		extensions = append(extensions, *md.ConflictInfo)
 	}
@@ -871,7 +900,7 @@ type RootMetadataSigned struct {
 	// signature over the root metadata by the private signing key
 	SigInfo SignatureInfo `codec:",omitempty"`
 	// all the metadata
-	MD RootMetadata
+	MD BareRootMetadata
 	// When does the server say this MD update was received?  (This is
 	// not necessarily trustworthy, just for informational purposes.)
 	untrustedServerTimestamp time.Time
@@ -890,7 +919,7 @@ func (rmds *RootMetadataSigned) VerifyRootMetadata(codec Codec, crypto Crypto) e
 	md := &rmds.MD
 	if rmds.MD.IsFinal() {
 		var err error
-		md, err = rmds.MD.deepCopy(codec, false)
+		md, err = rmds.MD.deepCopy(codec)
 		if err != nil {
 			return err
 		}
@@ -945,7 +974,7 @@ func (rmds *RootMetadataSigned) MakeFinalCopy(config Config) (
 		return nil, MetadataIsFinalError{}
 	}
 	var newRmds RootMetadataSigned
-	err := rmds.MD.deepCopyInPlace(config.Codec(), false, &newRmds.MD)
+	err := rmds.MD.deepCopyInPlace(config.Codec(), &newRmds.MD)
 	if err != nil {
 		return nil, err
 	}
