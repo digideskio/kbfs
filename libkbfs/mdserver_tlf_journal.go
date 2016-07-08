@@ -150,7 +150,7 @@ func (s *mdServerTlfJournal) putMDLocked(rmd *RootMetadata) error {
 	return ioutil.WriteFile(path, buf, 0600)
 }
 
-func (s *mdServerTlfJournal) getHeadForTLFReadLocked() (
+func (s *mdServerTlfJournal) getHeadReadLocked() (
 	rmd *RootMetadata, err error) {
 	headID, err := s.j.getHead()
 	if err != nil {
@@ -164,12 +164,12 @@ func (s *mdServerTlfJournal) getHeadForTLFReadLocked() (
 
 func (s *mdServerTlfJournal) checkGetParamsReadLocked(
 	currentUID keybase1.UID) error {
-	mergedMasterHead, err := s.getHeadForTLFReadLocked()
+	head, err := s.getHeadReadLocked()
 	if err != nil {
 		return MDServerError{err}
 	}
 
-	ok, err := isReader(currentUID, mergedMasterHead)
+	ok, err := isReader(currentUID, head)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -228,7 +228,7 @@ func (s *mdServerTlfJournal) journalLength() (uint64, error) {
 	return s.j.journalLength()
 }
 
-func (s *mdServerTlfJournal) getForTLF(
+func (s *mdServerTlfJournal) get(
 	currentUID keybase1.UID) (*RootMetadata, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -242,7 +242,7 @@ func (s *mdServerTlfJournal) getForTLF(
 		return nil, err
 	}
 
-	rmd, err := s.getHeadForTLFReadLocked()
+	rmd, err := s.getHeadReadLocked()
 	if err != nil {
 		return nil, MDServerError{err}
 	}
@@ -279,13 +279,12 @@ func (s *mdServerTlfJournal) put(
 
 	// Check permissions
 
-	mergedMasterHead, err := s.getHeadForTLFReadLocked()
+	head, err := s.getHeadReadLocked()
 	if err != nil {
 		return MDServerError{err}
 	}
 
-	ok, err := isWriterOrValidRekey(
-		s.codec, currentUID, mergedMasterHead, rmd)
+	ok, err := isWriterOrValidRekey(s.codec, currentUID, head, rmd)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -293,25 +292,10 @@ func (s *mdServerTlfJournal) put(
 		return MDServerErrorUnauthorized{}
 	}
 
-	head, err := s.getHeadForTLFReadLocked()
-	if err != nil {
-		return MDServerError{err}
-	}
-
 	if mStatus == Unmerged && head == nil {
-		// currHead for unmerged history might be on the main branch
-		prevRev := rmd.Revision - 1
-		rmds, err := s.getRangeReadLocked(
-			currentUID, prevRev, prevRev)
-		if err != nil {
-			return MDServerError{err}
+		return MDServerError{
+			Err: errors.New("Unexpectedly unmerged while empty"),
 		}
-		if len(rmds) != 1 {
-			return MDServerError{
-				Err: fmt.Errorf("Expected 1 MD block got %d", len(rmds)),
-			}
-		}
-		head = rmds[0]
 	}
 
 	// Consistency checks
