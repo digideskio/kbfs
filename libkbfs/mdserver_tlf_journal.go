@@ -172,6 +172,8 @@ func (s *mdServerTlfJournal) putMDLocked(rmd *RootMetadata, me keybase1.UID) err
 	// Record the last user to modify this metadata
 	rmd.LastModifyingUser = me
 
+	rmd.clearCachedMetadataIDForTest()
+
 	id, err := rmd.MetadataID(s.crypto)
 	if err != nil {
 		return err
