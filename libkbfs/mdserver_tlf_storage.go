@@ -205,7 +205,12 @@ func (s *mdServerTlfStorage) checkGetParamsReadLocked(
 		return MDServerError{err}
 	}
 
-	ok, err := isReader(currentUID, mergedMasterHead)
+	var mmhMD *RootMetadata
+	if mergedMasterHead != nil {
+		mmhMD = &mergedMasterHead.MD
+	}
+
+	ok, err := isReader(currentUID, mmhMD)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -332,8 +337,12 @@ func (s *mdServerTlfStorage) put(
 		return false, MDServerError{err}
 	}
 
-	ok, err := isWriterOrValidRekey(
-		s.codec, currentUID, mergedMasterHead, rmds)
+	var mmhMD *RootMetadata
+	if mergedMasterHead != nil {
+		mmhMD = &mergedMasterHead.MD
+	}
+
+	ok, err := isWriterOrValidRekey(s.codec, currentUID, mmhMD, &rmds.MD)
 	if err != nil {
 		return false, MDServerError{err}
 	}

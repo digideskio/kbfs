@@ -89,8 +89,7 @@ func (s *mdServerTlfJournal) mdPath(id MdID) string {
 // given ID and returns it.
 //
 // TODO: Verify signature?
-func (s *mdServerTlfJournal) getMDReadLocked(id MdID) (
-	*RootMetadataSigned, error) {
+func (s *mdServerTlfJournal) getMDReadLocked(id MdID) (*RootMetadata, error) {
 	// Read file.
 
 	path := s.mdPath(id)
@@ -99,15 +98,15 @@ func (s *mdServerTlfJournal) getMDReadLocked(id MdID) (
 		return nil, err
 	}
 
-	var rmds RootMetadataSigned
-	err = s.codec.Decode(data, &rmds)
+	var rmd RootMetadata
+	err = s.codec.Decode(data, &rmd)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check integrity.
 
-	mdID, err := rmds.MD.MetadataID(s.crypto)
+	mdID, err := rmd.MetadataID(s.crypto)
 	if err != nil {
 		return nil, err
 	}
@@ -117,18 +116,11 @@ func (s *mdServerTlfJournal) getMDReadLocked(id MdID) (
 			"Metadata ID mismatch: expected %s, got %s", id, mdID)
 	}
 
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	rmds.untrustedServerTimestamp = fileInfo.ModTime()
-
-	return &rmds, nil
+	return &rmd, nil
 }
 
-func (s *mdServerTlfJournal) putMDLocked(rmds *RootMetadataSigned) error {
-	id, err := rmds.MD.MetadataID(s.crypto)
+func (s *mdServerTlfJournal) putMDLocked(rmd *RootMetadata) error {
+	id, err := rmd.MetadataID(s.crypto)
 	if err != nil {
 		return err
 	}
@@ -150,7 +142,7 @@ func (s *mdServerTlfJournal) putMDLocked(rmds *RootMetadataSigned) error {
 		return err
 	}
 
-	buf, err := s.codec.Encode(rmds)
+	buf, err := s.codec.Encode(rmd)
 	if err != nil {
 		return err
 	}
@@ -159,7 +151,7 @@ func (s *mdServerTlfJournal) putMDLocked(rmds *RootMetadataSigned) error {
 }
 
 func (s *mdServerTlfJournal) getHeadForTLFReadLocked() (
-	rmds *RootMetadataSigned, err error) {
+	rmd *RootMetadata, err error) {
 	headID, err := s.j.getHead()
 	if err != nil {
 		return nil, err
@@ -191,7 +183,7 @@ func (s *mdServerTlfJournal) checkGetParamsReadLocked(
 func (s *mdServerTlfJournal) getRangeReadLocked(
 	currentUID keybase1.UID, deviceKID keybase1.KID,
 	start, stop MetadataRevision) (
-	[]*RootMetadataSigned, error) {
+	[]*RootMetadata, error) {
 	err := s.checkGetParamsReadLocked(currentUID, deviceKID)
 	if err != nil {
 		return nil, err
@@ -201,21 +193,21 @@ func (s *mdServerTlfJournal) getRangeReadLocked(
 	if err != nil {
 		return nil, err
 	}
-	var rmdses []*RootMetadataSigned
+	var rmds []*RootMetadata
 	for i, mdID := range mdIDs {
 		expectedRevision := realStart + MetadataRevision(i)
-		rmds, err := s.getMDReadLocked(mdID)
+		rmd, err := s.getMDReadLocked(mdID)
 		if err != nil {
 			return nil, MDServerError{err}
 		}
-		if expectedRevision != rmds.MD.Revision {
+		if expectedRevision != rmd.Revision {
 			panic(fmt.Errorf("expected revision %v, got %v",
-				expectedRevision, rmds.MD.Revision))
+				expectedRevision, rmd.Revision))
 		}
-		rmdses = append(rmdses, rmds)
+		rmds = append(rmds, rmd)
 	}
 
-	return rmdses, nil
+	return rmds, nil
 }
 
 func (s *mdServerTlfJournal) isShutdownReadLocked() bool {
@@ -239,7 +231,7 @@ func (s *mdServerTlfJournal) journalLength() (uint64, error) {
 
 func (s *mdServerTlfJournal) getForTLF(
 	currentUID keybase1.UID, deviceKID keybase1.KID) (
-	*RootMetadataSigned, error) {
+	*RootMetadata, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -252,16 +244,16 @@ func (s *mdServerTlfJournal) getForTLF(
 		return nil, err
 	}
 
-	rmds, err := s.getHeadForTLFReadLocked()
+	rmd, err := s.getHeadForTLFReadLocked()
 	if err != nil {
 		return nil, MDServerError{err}
 	}
-	return rmds, nil
+	return rmd, nil
 }
 
 func (s *mdServerTlfJournal) getRange(
 	currentUID keybase1.UID, deviceKID keybase1.KID,
-	start, stop MetadataRevision) ([]*RootMetadataSigned, error) {
+	start, stop MetadataRevision) ([]*RootMetadata, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -274,7 +266,7 @@ func (s *mdServerTlfJournal) getRange(
 
 func (s *mdServerTlfJournal) put(
 	currentUID keybase1.UID, deviceKID keybase1.KID,
-	rmds *RootMetadataSigned) (err error) {
+	rmd *RootMetadata) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -282,8 +274,8 @@ func (s *mdServerTlfJournal) put(
 		return errMDServerTlfJournalShutdown
 	}
 
-	mStatus := rmds.MD.MergedStatus()
-	bid := rmds.MD.BID
+	mStatus := rmd.MergedStatus()
+	bid := rmd.BID
 
 	if (mStatus == Merged) != (bid == NullBranchID) {
 		return MDServerErrorBadRequest{Reason: "Invalid branch ID"}
@@ -297,7 +289,7 @@ func (s *mdServerTlfJournal) put(
 	}
 
 	ok, err := isWriterOrValidRekey(
-		s.codec, currentUID, mergedMasterHead, rmds)
+		s.codec, currentUID, mergedMasterHead, rmd)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -312,39 +304,39 @@ func (s *mdServerTlfJournal) put(
 
 	if mStatus == Unmerged && head == nil {
 		// currHead for unmerged history might be on the main branch
-		prevRev := rmds.MD.Revision - 1
-		rmdses, err := s.getRangeReadLocked(
+		prevRev := rmd.Revision - 1
+		rmds, err := s.getRangeReadLocked(
 			currentUID, deviceKID, prevRev, prevRev)
 		if err != nil {
 			return MDServerError{err}
 		}
-		if len(rmdses) != 1 {
+		if len(rmds) != 1 {
 			return MDServerError{
-				Err: fmt.Errorf("Expected 1 MD block got %d", len(rmdses)),
+				Err: fmt.Errorf("Expected 1 MD block got %d", len(rmds)),
 			}
 		}
-		head = rmdses[0]
+		head = rmds[0]
 	}
 
 	// Consistency checks
 	if head != nil {
-		err := head.MD.CheckValidSuccessorForServer(s.crypto, &rmds.MD)
+		err := head.CheckValidSuccessorForServer(s.crypto, rmd)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = s.putMDLocked(rmds)
+	err = s.putMDLocked(rmd)
 	if err != nil {
 		return MDServerError{err}
 	}
 
-	id, err := rmds.MD.MetadataID(s.crypto)
+	id, err := rmd.MetadataID(s.crypto)
 	if err != nil {
 		return MDServerError{err}
 	}
 
-	err = s.j.append(rmds.MD.Revision, id)
+	err = s.j.append(rmd.Revision, id)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -374,15 +366,15 @@ func (s *mdServerTlfJournal) flushOne(
 		return false, err
 	}
 
-	log.Debug("Flushing MD put id=%s, rev=%s", earliestID, rmd.MD.Revision)
+	log.Debug("Flushing MD put id=%s, rev=%s", earliestID, rmd.Revision)
 
-	if rmd.MD.MergedStatus() == Merged {
-		err = mdOps.Put(context.Background(), &rmd.MD)
+	if rmd.MergedStatus() == Merged {
+		err = mdOps.Put(context.Background(), rmd)
 		if err != nil {
 			return false, err
 		}
 	} else {
-		err = mdOps.PutUnmerged(context.Background(), &rmd.MD)
+		err = mdOps.PutUnmerged(context.Background(), rmd)
 		if err != nil {
 			return false, err
 		}

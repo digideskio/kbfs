@@ -169,7 +169,11 @@ func (md *MDServerMemory) checkGetParams(
 		return NullBranchID, MDServerError{err}
 	}
 
-	ok, err := isReader(currentUID, mergedMasterHead)
+	var mmhMD *RootMetadata
+	if mergedMasterHead != nil {
+		mmhMD = &mergedMasterHead.MD
+	}
+	ok, err := isReader(currentUID, mmhMD)
 	if err != nil {
 		return NullBranchID, MDServerError{err}
 	}
@@ -337,8 +341,13 @@ func (md *MDServerMemory) Put(ctx context.Context, rmds *RootMetadataSigned) err
 		return MDServerError{err}
 	}
 
+	var mmhMD *RootMetadata
+	if mergedMasterHead != nil {
+		mmhMD = &mergedMasterHead.MD
+	}
+
 	ok, err := isWriterOrValidRekey(
-		md.config.Codec(), currentUID, mergedMasterHead, rmds)
+		md.config.Codec(), currentUID, mmhMD, &rmds.MD)
 	if err != nil {
 		return MDServerError{err}
 	}

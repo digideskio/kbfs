@@ -15,14 +15,14 @@ import (
 // access TLF metadata. mergedMasterHead can be nil, in which case
 // true is returned.
 func isReader(currentUID keybase1.UID,
-	mergedMasterHead *RootMetadataSigned) (bool, error) {
+	mergedMasterHead *RootMetadata) (bool, error) {
 	if mergedMasterHead == nil {
 		// TODO: the real mdserver will actually reverse
 		// lookup the folder handle and check that the UID is
 		// listed.
 		return true, nil
 	}
-	h, err := mergedMasterHead.MD.MakeBareTlfHandle()
+	h, err := mergedMasterHead.MakeBareTlfHandle()
 	if err != nil {
 		return false, err
 	}
@@ -33,15 +33,14 @@ func isReader(currentUID keybase1.UID,
 // access TLF metadata. mergedMasterHead can be nil, in which case
 // true is returned.
 func isWriterOrValidRekey(codec Codec, currentUID keybase1.UID,
-	mergedMasterHead *RootMetadataSigned,
-	newMd *RootMetadataSigned) (bool, error) {
+	mergedMasterHead *RootMetadata, newMd *RootMetadata) (bool, error) {
 	if mergedMasterHead == nil {
 		// TODO: the real mdserver will actually reverse
 		// lookup the folder handle and check that the UID is
 		// listed.
 		return true, nil
 	}
-	h, err := mergedMasterHead.MD.MakeBareTlfHandle()
+	h, err := mergedMasterHead.MakeBareTlfHandle()
 	if err != nil {
 		return false, err
 	}
@@ -52,8 +51,8 @@ func isWriterOrValidRekey(codec Codec, currentUID keybase1.UID,
 	if h.IsReader(currentUID) {
 		// if this is a reader, are they acting within their
 		// restrictions?
-		return newMd.MD.IsValidRekeyRequest(
-			codec, &mergedMasterHead.MD, currentUID)
+		return newMd.IsValidRekeyRequest(
+			codec, mergedMasterHead, currentUID)
 	}
 
 	return false, nil
