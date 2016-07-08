@@ -191,6 +191,10 @@ type ConstRootMetadata struct {
 	*RootMetadata
 }
 
+func MakeConstRootMetadata(rmd *RootMetadata) ConstRootMetadata {
+	return ConstRootMetadata{rmd}
+}
+
 func (md *BareRootMetadata) haveOnlyUserRKeysChanged(codec Codec, prevMD *RootMetadata, user keybase1.UID) (bool, error) {
 	// Require the same number of generations
 	if len(md.RKeys) != len(prevMD.RKeys) {

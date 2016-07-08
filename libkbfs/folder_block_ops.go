@@ -1879,7 +1879,7 @@ func (fbo *folderBlockOps) startSyncWriteLocked(ctx context.Context,
 
 	// update the parent directories, and write all the new blocks out
 	// to disk
-	fblock, err = fbo.getFileLocked(ctx, lState, ConstRootMetadata{md}, file, blockWrite)
+	fblock, err = fbo.getFileLocked(ctx, lState, MakeConstRootMetadata(md), file, blockWrite)
 	if err != nil {
 		return nil, nil, syncState, err
 	}
@@ -1961,7 +1961,7 @@ func (fbo *folderBlockOps) startSyncWriteLocked(ctx context.Context,
 			if isDirty {
 				_, _, _, block, nextBlockOff, _, err :=
 					fbo.getFileBlockAtOffsetLocked(
-						ctx, lState, ConstRootMetadata{md}, file, fblock,
+						ctx, lState, MakeConstRootMetadata(md), file, fblock,
 						ptr.Off, blockWrite)
 				if err != nil {
 					return nil, nil, syncState, err
@@ -1980,13 +1980,13 @@ func (fbo *folderBlockOps) startSyncWriteLocked(ctx context.Context,
 						// need to make a new block
 						if err := fbo.newRightBlockLocked(
 							ctx, lState, file.tailPointer(), file, fblock,
-							endOfBlock, ConstRootMetadata{md}); err != nil {
+							endOfBlock, MakeConstRootMetadata(md)); err != nil {
 							return nil, nil, syncState, err
 						}
 					}
 					rPtr, _, _, rblock, _, _, err :=
 						fbo.getFileBlockAtOffsetLocked(
-							ctx, lState, ConstRootMetadata{md}, file, fblock,
+							ctx, lState, MakeConstRootMetadata(md), file, fblock,
 							endOfBlock, blockWrite)
 					if err != nil {
 						return nil, nil, syncState, err
@@ -2008,7 +2008,7 @@ func (fbo *folderBlockOps) startSyncWriteLocked(ctx context.Context,
 					endOfBlock := ptr.Off + int64(len(block.Contents))
 					rPtr, _, _, rblock, _, _, err :=
 						fbo.getFileBlockAtOffsetLocked(
-							ctx, lState, ConstRootMetadata{md}, file, fblock,
+							ctx, lState, MakeConstRootMetadata(md), file, fblock,
 							endOfBlock, blockWrite)
 					if err != nil {
 						return nil, nil, syncState, err
@@ -2051,13 +2051,13 @@ func (fbo *folderBlockOps) startSyncWriteLocked(ctx context.Context,
 			}
 			if isDirty {
 				_, _, _, block, _, _, err := fbo.getFileBlockAtOffsetLocked(
-					ctx, lState, ConstRootMetadata{md}, file, fblock, ptr.Off, blockWrite)
+					ctx, lState, MakeConstRootMetadata(md), file, fblock, ptr.Off, blockWrite)
 				if err != nil {
 					return nil, nil, syncState, err
 				}
 
 				newInfo, _, readyBlockData, err :=
-					fbo.ReadyBlock(ctx, ConstRootMetadata{md}, block, uid)
+					fbo.ReadyBlock(ctx, MakeConstRootMetadata(md), block, uid)
 				if err != nil {
 					return nil, nil, syncState, err
 				}
@@ -2109,7 +2109,7 @@ func (fbo *folderBlockOps) makeLocalBcache(ctx context.Context,
 	parentPath := file.parentPath()
 
 	dblock, err := fbo.getDirLocked(
-		ctx, lState, ConstRootMetadata{md}, *parentPath, blockWrite)
+		ctx, lState, MakeConstRootMetadata(md), *parentPath, blockWrite)
 	if err != nil {
 		return nil, err
 	}
