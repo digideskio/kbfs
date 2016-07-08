@@ -183,6 +183,10 @@ type RootMetadata struct {
 	mdID     MdID
 }
 
+type ConstRootMetadata struct {
+	*RootMetadata
+}
+
 func (md *RootMetadata) haveOnlyUserRKeysChanged(codec Codec, prevMD *RootMetadata, user keybase1.UID) (bool, error) {
 	// Require the same number of generations
 	if len(md.RKeys) != len(prevMD.RKeys) {
@@ -762,7 +766,7 @@ func (md *RootMetadata) isReadableOrError(ctx context.Context, config Config) er
 	if err != nil {
 		return err
 	}
-	return makeRekeyReadError(md, resolvedHandle, md.LatestKeyGeneration(),
+	return makeRekeyReadError(ConstRootMetadata{md}, resolvedHandle, md.LatestKeyGeneration(),
 		uid, username)
 }
 
@@ -953,7 +957,7 @@ func (rmds *RootMetadataSigned) MakeFinalCopy(config Config) (
 }
 
 func makeRekeyReadError(
-	md *RootMetadata, resolvedHandle *TlfHandle, keyGen KeyGen,
+	md ConstRootMetadata, resolvedHandle *TlfHandle, keyGen KeyGen,
 	uid keybase1.UID, username libkb.NormalizedUsername) error {
 	// If the user is not a legitimate reader of the folder, this is a
 	// normal read access error.

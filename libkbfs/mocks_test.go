@@ -4,15 +4,14 @@
 package libkbfs
 
 import (
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
 	libkb "github.com/keybase/client/go/libkb"
 	logger "github.com/keybase/client/go/logger"
 	protocol "github.com/keybase/client/go/protocol"
 	go_metrics "github.com/rcrowley/go-metrics"
 	context "golang.org/x/net/context"
+	reflect "reflect"
+	time "time"
 )
 
 // Mock of AuthTokenRefreshHandler interface
@@ -923,7 +922,7 @@ func (_m *MockKeyManager) EXPECT() *_MockKeyManagerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockKeyManager) GetTLFCryptKeyForEncryption(ctx context.Context, md *RootMetadata) (TLFCryptKey, error) {
+func (_m *MockKeyManager) GetTLFCryptKeyForEncryption(ctx context.Context, md ConstRootMetadata) (TLFCryptKey, error) {
 	ret := _m.ctrl.Call(_m, "GetTLFCryptKeyForEncryption", ctx, md)
 	ret0, _ := ret[0].(TLFCryptKey)
 	ret1, _ := ret[1].(error)
@@ -934,7 +933,7 @@ func (_mr *_MockKeyManagerRecorder) GetTLFCryptKeyForEncryption(arg0, arg1 inter
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetTLFCryptKeyForEncryption", arg0, arg1)
 }
 
-func (_m *MockKeyManager) GetTLFCryptKeyForMDDecryption(ctx context.Context, mdToDecrypt *RootMetadata, mdWithKeys *RootMetadata) (TLFCryptKey, error) {
+func (_m *MockKeyManager) GetTLFCryptKeyForMDDecryption(ctx context.Context, mdToDecrypt ConstRootMetadata, mdWithKeys ConstRootMetadata) (TLFCryptKey, error) {
 	ret := _m.ctrl.Call(_m, "GetTLFCryptKeyForMDDecryption", ctx, mdToDecrypt, mdWithKeys)
 	ret0, _ := ret[0].(TLFCryptKey)
 	ret1, _ := ret[1].(error)
@@ -945,7 +944,7 @@ func (_mr *_MockKeyManagerRecorder) GetTLFCryptKeyForMDDecryption(arg0, arg1, ar
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetTLFCryptKeyForMDDecryption", arg0, arg1, arg2)
 }
 
-func (_m *MockKeyManager) GetTLFCryptKeyForBlockDecryption(ctx context.Context, md *RootMetadata, blockPtr BlockPointer) (TLFCryptKey, error) {
+func (_m *MockKeyManager) GetTLFCryptKeyForBlockDecryption(ctx context.Context, md ConstRootMetadata, blockPtr BlockPointer) (TLFCryptKey, error) {
 	ret := _m.ctrl.Call(_m, "GetTLFCryptKeyForBlockDecryption", ctx, md, blockPtr)
 	ret0, _ := ret[0].(TLFCryptKey)
 	ret1, _ := ret[1].(error)
@@ -3567,6 +3566,14 @@ func (_m *MockConfig) DoBackgroundFlushes() bool {
 
 func (_mr *_MockConfigRecorder) DoBackgroundFlushes() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "DoBackgroundFlushes")
+}
+
+func (_m *MockConfig) SetDoBackgroundFlushes(_param0 bool) {
+	_m.ctrl.Call(_m, "SetDoBackgroundFlushes", _param0)
+}
+
+func (_mr *_MockConfigRecorder) SetDoBackgroundFlushes(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetDoBackgroundFlushes", arg0)
 }
 
 func (_m *MockConfig) RekeyWithPromptWaitTime() time.Duration {
