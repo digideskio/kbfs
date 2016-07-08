@@ -113,6 +113,8 @@ func (s *mdServerTlfJournal) getMDReadLocked(id MdID) (*RootMetadata, error) {
 		return nil, err
 	}
 
+	rmd.clearCachedMetadataIDForTest()
+
 	if id != mdID {
 		return nil, fmt.Errorf(
 			"Metadata ID mismatch: expected %s, got %s", id, mdID)
