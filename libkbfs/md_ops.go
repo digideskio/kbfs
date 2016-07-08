@@ -535,6 +535,7 @@ func (md *MDOpsStandard) put(ctx context.Context, rmd *RootMetadata) error {
 // Put implements the MDOps interface for MDOpsStandard.
 func (md *MDOpsStandard) Put(ctx context.Context, rmd *RootMetadata) error {
 	if rmd.MergedStatus() == Unmerged {
+		panic(UnexpectedUnmergedPutError{})
 		return UnexpectedUnmergedPutError{}
 	}
 	return md.put(ctx, rmd)

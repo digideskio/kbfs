@@ -1935,6 +1935,7 @@ func (fbo *folderBranchOps) finalizeGCOp(ctx context.Context, gco *gcOp) (
 	}
 
 	if md.MergedStatus() == Unmerged {
+		panic(UnexpectedUnmergedPutError{})
 		return UnexpectedUnmergedPutError{}
 	}
 

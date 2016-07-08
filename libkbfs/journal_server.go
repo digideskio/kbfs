@@ -5,6 +5,7 @@
 package libkbfs
 
 import (
+	"fmt"
 	"path/filepath"
 	"sync"
 
@@ -205,6 +206,7 @@ func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, journal *mdSer
 
 func (j journalMDOps) Put(ctx context.Context, rmd *RootMetadata) error {
 	if rmd.MergedStatus() == Unmerged {
+		panic(fmt.Errorf("bad md = %+v", rmd))
 		return UnexpectedUnmergedPutError{}
 	}
 
