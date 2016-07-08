@@ -54,9 +54,10 @@ type mdServerTlfJournal struct {
 	//
 	// TODO: Consider using https://github.com/pkg/singlefile
 	// instead.
-	lock       sync.RWMutex
-	isShutdown bool
-	j          mdServerBranchJournal
+	lock         sync.RWMutex
+	isShutdown   bool
+	j            mdServerBranchJournal
+	justBranched bool
 }
 
 func makeMDServerTlfJournal(
@@ -292,9 +293,27 @@ func (s *mdServerTlfJournal) put(
 		return MDServerErrorUnauthorized{}
 	}
 
-	if mStatus == Unmerged && head == nil {
-		return MDServerError{
-			Err: errors.New("Unexpectedly unmerged while empty"),
+	if mStatus == Merged {
+		if s.justBranched {
+			rmd.WFlags |= MetadataFlagUnmerged
+			rmd.BID = head.BID
+			headID, err := head.MetadataID(s.crypto)
+			if err != nil {
+				return MDServerError{err}
+			}
+			rmd.PrevRoot = headID
+			s.justBranched = false
+		} else if head.MergedStatus() != Merged {
+			// Conflict resolution shouldn't happen.
+			return MDServerError{
+				Err: errors.New("Shouldn't be doing conflict res"),
+			}
+		}
+	} else {
+		if head == nil {
+			return MDServerError{
+				Err: errors.New("Unexpectedly unmerged while empty"),
+			}
 		}
 	}
 
@@ -427,6 +446,8 @@ func (s *mdServerTlfJournal) flushOne(
 			if err != nil {
 				return false, err
 			}
+
+			s.justBranched = true
 		} else if err != nil {
 			return false, err
 		}
