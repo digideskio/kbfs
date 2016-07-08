@@ -379,6 +379,9 @@ func (s *mdServerTlfJournal) flushOne(
 				return false, err
 			}
 
+			log.Debug("Conflict detected; rewriting MDs %s to %s",
+				earliestRevision, latestRevision)
+
 			start, allMdIDs, err := s.j.getRange(earliestRevision, latestRevision)
 			if err != nil {
 				return false, err
@@ -388,6 +391,8 @@ func (s *mdServerTlfJournal) flushOne(
 			if err != nil {
 				return false, err
 			}
+
+			log.Debug("New branch ID=%s", bid)
 
 			// TODO: Do the below atomically.
 
@@ -419,6 +424,9 @@ func (s *mdServerTlfJournal) flushOne(
 				if err != nil {
 					return false, err
 				}
+
+				log.Debug("Changing ID for rev=%s from %s to %s",
+					rev, id, newID)
 			}
 
 			earliestID, err := s.j.getEarliest()
