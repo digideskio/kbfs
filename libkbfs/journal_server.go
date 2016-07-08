@@ -206,7 +206,7 @@ func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, journal *mdSer
 
 func (j journalMDOps) Put(ctx context.Context, rmd *RootMetadata) error {
 	if rmd.MergedStatus() == Unmerged {
-		panic(fmt.Errorf("bad md = %+v", rmd))
+		fmt.Printf("bad md = %+v\n", rmd)
 		return UnexpectedUnmergedPutError{}
 	}
 
