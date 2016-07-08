@@ -163,7 +163,7 @@ func (s *mdServerTlfJournal) getHeadForTLFReadLocked() (
 }
 
 func (s *mdServerTlfJournal) checkGetParamsReadLocked(
-	currentUID keybase1.UID, deviceKID keybase1.KID) error {
+	currentUID keybase1.UID) error {
 	mergedMasterHead, err := s.getHeadForTLFReadLocked()
 	if err != nil {
 		return MDServerError{err}
@@ -181,10 +181,9 @@ func (s *mdServerTlfJournal) checkGetParamsReadLocked(
 }
 
 func (s *mdServerTlfJournal) getRangeReadLocked(
-	currentUID keybase1.UID, deviceKID keybase1.KID,
-	start, stop MetadataRevision) (
+	currentUID keybase1.UID, start, stop MetadataRevision) (
 	[]*RootMetadata, error) {
-	err := s.checkGetParamsReadLocked(currentUID, deviceKID)
+	err := s.checkGetParamsReadLocked(currentUID)
 	if err != nil {
 		return nil, err
 	}
@@ -230,8 +229,7 @@ func (s *mdServerTlfJournal) journalLength() (uint64, error) {
 }
 
 func (s *mdServerTlfJournal) getForTLF(
-	currentUID keybase1.UID, deviceKID keybase1.KID) (
-	*RootMetadata, error) {
+	currentUID keybase1.UID) (*RootMetadata, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -239,7 +237,7 @@ func (s *mdServerTlfJournal) getForTLF(
 		return nil, errMDServerTlfJournalShutdown
 	}
 
-	err := s.checkGetParamsReadLocked(currentUID, deviceKID)
+	err := s.checkGetParamsReadLocked(currentUID)
 	if err != nil {
 		return nil, err
 	}
@@ -252,8 +250,7 @@ func (s *mdServerTlfJournal) getForTLF(
 }
 
 func (s *mdServerTlfJournal) getRange(
-	currentUID keybase1.UID, deviceKID keybase1.KID,
-	start, stop MetadataRevision) ([]*RootMetadata, error) {
+	currentUID keybase1.UID, start, stop MetadataRevision) ([]*RootMetadata, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -261,12 +258,11 @@ func (s *mdServerTlfJournal) getRange(
 		return nil, errMDServerTlfJournalShutdown
 	}
 
-	return s.getRangeReadLocked(currentUID, deviceKID, start, stop)
+	return s.getRangeReadLocked(currentUID, start, stop)
 }
 
 func (s *mdServerTlfJournal) put(
-	currentUID keybase1.UID, deviceKID keybase1.KID,
-	rmd *RootMetadata) (err error) {
+	currentUID keybase1.UID, rmd *RootMetadata) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -306,7 +302,7 @@ func (s *mdServerTlfJournal) put(
 		// currHead for unmerged history might be on the main branch
 		prevRev := rmd.Revision - 1
 		rmds, err := s.getRangeReadLocked(
-			currentUID, deviceKID, prevRev, prevRev)
+			currentUID, prevRev, prevRev)
 		if err != nil {
 			return MDServerError{err}
 		}

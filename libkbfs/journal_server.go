@@ -192,12 +192,7 @@ func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, journal *mdSer
 		return MDServerError{err}
 	}
 
-	key, err := j.jServer.kbpki.GetCurrentCryptPublicKey(ctx)
-	if err != nil {
-		return MDServerError{err}
-	}
-
-	err = journal.put(currentUID, key.kid, rmd)
+	err = journal.put(currentUID, rmd)
 	if err != nil {
 		return err
 	}

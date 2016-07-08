@@ -12,10 +12,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/keybase/client/go/logger"
-
-	"golang.org/x/net/context"
-
 	keybase1 "github.com/keybase/client/go/protocol"
 )
 
@@ -401,55 +397,6 @@ func (s *mdServerTlfStorage) put(
 	}
 
 	return recordBranchID, nil
-}
-
-func (s *mdServerTlfStorage) flushOne(
-	mdOps MDOps, log logger.Logger) (bool, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if s.isShutdownReadLocked() {
-		return false, errMDServerTlfStorageShutdown
-	}
-
-	j, ok := s.branchJournals[NullBranchID]
-	if !ok {
-		return false, nil
-	}
-
-	earliestID, err := j.getEarliest()
-	if err != nil {
-		return false, err
-	}
-	if earliestID == (MdID{}) {
-		return false, nil
-	}
-
-	rmd, err := s.getMDReadLocked(earliestID)
-	if err != nil {
-		return false, err
-	}
-
-	log.Debug("Flushing MD put id=%s, rev=%s", earliestID, rmd.MD.Revision)
-
-	if rmd.MD.MergedStatus() == Merged {
-		err = mdOps.Put(context.Background(), &rmd.MD)
-		if err != nil {
-			return false, err
-		}
-	} else {
-		err = mdOps.PutUnmerged(context.Background(), &rmd.MD)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	err = j.removeEarliest()
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 func (s *mdServerTlfStorage) shutdown() {
