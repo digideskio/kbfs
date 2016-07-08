@@ -502,10 +502,29 @@ func (md *MDOpsStandard) put(ctx context.Context, rmd *RootMetadata) error {
 		return err
 	}
 
+	rmd.clearCachedMetadataIDForTest()
+
+	id, err := rmd.MetadataID(md.config.Crypto())
+	if err != nil {
+		md.log.Debug("put: no pre-ready ID: %v", err)
+	} else {
+		md.log.Debug("put: pre-ready ID=%s", id)
+	}
+
 	rmds, err := md.readyMD(ctx, rmd)
 	if err != nil {
 		return err
 	}
+
+	rmd.clearCachedMetadataIDForTest()
+
+	id, err = rmd.MetadataID(md.config.Crypto())
+	if err != nil {
+		return err
+	}
+
+	md.log.Debug("put: post-ready ID=%s", id)
+
 	err = md.config.MDServer().Put(ctx, rmds)
 	if err != nil {
 		return err

@@ -76,7 +76,6 @@ func (c CryptoCommon) MakeMdID(md *RootMetadata) (MdID, error) {
 	// Make sure that the serialized metadata is set; otherwise we
 	// won't get the right MdID.
 	if md.SerializedPrivateMetadata == nil {
-		panic("what")
 		return MdID{}, MDMissingDataError{md.ID}
 	}
 
