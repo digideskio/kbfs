@@ -433,8 +433,8 @@ func (s *mdServerTlfJournal) flushOne(
 				return false, err
 			}
 
-			log.Debug("Conflict detected; rewriting MDs %s to %s",
-				earliestRevision, latestRevision)
+			log.Debug("Conflict detected %v; rewriting MDs %s to %s",
+				err, earliestRevision, latestRevision)
 
 			start, allMdIDs, err := s.j.getRange(earliestRevision, latestRevision)
 			if err != nil {
