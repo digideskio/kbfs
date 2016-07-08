@@ -303,7 +303,7 @@ func (s *mdServerTlfJournal) put(
 			}
 			rmd.PrevRoot = headID
 			s.justBranched = false
-		} else if head.MergedStatus() != Merged {
+		} else if head != nil && head.MergedStatus() != Merged {
 			// Conflict resolution shouldn't happen.
 			return MDServerError{
 				Err: errors.New("Shouldn't be doing conflict res"),
