@@ -774,7 +774,7 @@ func (md *RootMetadata) isReadableOrError(ctx context.Context, config Config) er
 	if err != nil {
 		return err
 	}
-	return makeRekeyReadError(ConstRootMetadata{md}, resolvedHandle, md.LatestKeyGeneration(),
+	return makeRekeyReadError(MakeConstRootMetadata(md), resolvedHandle, md.LatestKeyGeneration(),
 		uid, username)
 }
 
