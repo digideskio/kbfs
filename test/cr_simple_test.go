@@ -1017,10 +1017,9 @@ func TestCrBothCreateFileEXCL(t *testing.T) {
 			expectError(mkfileexcl("a/b"), "b already exists"),
 			reenableUpdates(),
 			lsdir("a/", m{"b$": "FILE"}),
-			mkfile("a/c", "a hack to kick-off block cleanup"),
 		),
 		as(alice,
-			lsdir("a/", m{"b$": "FILE", "c$": "FILE"}),
+			lsdir("a/", m{"b$": "FILE"}),
 		),
 	)
 }
