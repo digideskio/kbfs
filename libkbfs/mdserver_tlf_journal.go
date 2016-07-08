@@ -179,6 +179,8 @@ func (s *mdServerTlfJournal) putMDLocked(rmd *RootMetadata, me keybase1.UID) err
 		return err
 	}
 
+	fmt.Printf("post-putMDLocked ID = %s\n", id)
+
 	_, err = s.getMDReadLocked(id)
 	if os.IsNotExist(err) {
 		// Continue on.
@@ -414,6 +416,12 @@ func (s *mdServerTlfJournal) flushOne(
 	}
 
 	rmd, err := s.getMDReadLocked(earliestID)
+	if err != nil {
+		return false, err
+	}
+
+	ctx := context.Background()
+	err = decryptMDPrivateData(ctx, s.config, rmd, rmd)
 	if err != nil {
 		return false, err
 	}
