@@ -322,7 +322,7 @@ func (md *MDServerDisk) GetForTLF(ctx context.Context, id TlfID,
 		return nil, err
 	}
 
-	return tlfStorage.getForTLF(currentUID, bid)
+	return tlfStorage.get(currentUID, bid)
 }
 
 // GetRange implements the MDServer interface for MDServerDisk.

@@ -178,7 +178,7 @@ func (s *mdServerTlfStorage) getOrCreateBranchJournalLocked(
 	return j, nil
 }
 
-func (s *mdServerTlfStorage) getHeadForTLFReadLocked(bid BranchID) (
+func (s *mdServerTlfStorage) getHeadReadLocked(bid BranchID) (
 	rmds *RootMetadataSigned, err error) {
 	j, ok := s.branchJournals[bid]
 	if !ok {
@@ -196,7 +196,7 @@ func (s *mdServerTlfStorage) getHeadForTLFReadLocked(bid BranchID) (
 
 func (s *mdServerTlfStorage) checkGetParamsReadLocked(
 	currentUID keybase1.UID, bid BranchID) error {
-	mergedMasterHead, err := s.getHeadForTLFReadLocked(NullBranchID)
+	mergedMasterHead, err := s.getHeadReadLocked(NullBranchID)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -275,7 +275,7 @@ func (s *mdServerTlfStorage) journalLength(bid BranchID) (uint64, error) {
 	return j.journalLength()
 }
 
-func (s *mdServerTlfStorage) getForTLF(
+func (s *mdServerTlfStorage) get(
 	currentUID keybase1.UID, bid BranchID) (*RootMetadataSigned, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -289,7 +289,7 @@ func (s *mdServerTlfStorage) getForTLF(
 		return nil, err
 	}
 
-	rmds, err := s.getHeadForTLFReadLocked(bid)
+	rmds, err := s.getHeadReadLocked(bid)
 	if err != nil {
 		return nil, MDServerError{err}
 	}
@@ -328,7 +328,7 @@ func (s *mdServerTlfStorage) put(
 
 	// Check permissions
 
-	mergedMasterHead, err := s.getHeadForTLFReadLocked(NullBranchID)
+	mergedMasterHead, err := s.getHeadReadLocked(NullBranchID)
 	if err != nil {
 		return false, MDServerError{err}
 	}
@@ -346,7 +346,7 @@ func (s *mdServerTlfStorage) put(
 		return false, MDServerErrorUnauthorized{}
 	}
 
-	head, err := s.getHeadForTLFReadLocked(bid)
+	head, err := s.getHeadReadLocked(bid)
 	if err != nil {
 		return false, MDServerError{err}
 	}

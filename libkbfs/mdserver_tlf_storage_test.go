@@ -44,7 +44,7 @@ func TestMDServerTlfStorageBasic(t *testing.T) {
 
 	// (1) Validate merged branch is empty.
 
-	head, err := s.getForTLF(uid, NullBranchID)
+	head, err := s.get(uid, NullBranchID)
 	require.NoError(t, err)
 	require.Nil(t, head)
 
@@ -120,7 +120,7 @@ func TestMDServerTlfStorageBasic(t *testing.T) {
 
 	// (5) Check for proper unmerged head.
 
-	head, err = s.getForTLF(uid, bid)
+	head, err = s.get(uid, bid)
 	require.NoError(t, err)
 	require.NotNil(t, head)
 	require.Equal(t, MetadataRevision(40), head.MD.Revision)
@@ -141,7 +141,7 @@ func TestMDServerTlfStorageBasic(t *testing.T) {
 
 	// (10) Check for proper merged head.
 
-	head, err = s.getForTLF(uid, NullBranchID)
+	head, err = s.get(uid, NullBranchID)
 	require.NoError(t, err)
 	require.NotNil(t, head)
 	require.Equal(t, MetadataRevision(10), head.MD.Revision)
