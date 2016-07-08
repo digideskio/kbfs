@@ -15,7 +15,7 @@ import (
 )
 
 type fbmHelper interface {
-	getMDForFBM(ctx context.Context) (*RootMetadata, error)
+	getMDForFBM(ctx context.Context) (ConstRootMetadata, error)
 	finalizeGCOp(ctx context.Context, gco *gcOp) error
 }
 
@@ -35,7 +35,7 @@ const (
 )
 
 type blocksToDelete struct {
-	md     *RootMetadata
+	md     ConstRootMetadata
 	blocks []BlockPointer
 }
 
@@ -50,7 +50,7 @@ type folderBlockManager struct {
 
 	// A queue of MD updates for this folder that need to have their
 	// unref's blocks archived
-	archiveChan chan *RootMetadata
+	archiveChan chan ConstRootMetadata
 
 	archivePauseChan chan (<-chan struct{})
 
@@ -104,7 +104,7 @@ func newFolderBlockManager(config Config, fb FolderBranch,
 		log:                     log,
 		shutdownChan:            make(chan struct{}),
 		id:                      fb.Tlf,
-		archiveChan:             make(chan *RootMetadata, 25),
+		archiveChan:             make(chan ConstRootMetadata, 25),
 		archivePauseChan:        make(chan (<-chan struct{})),
 		blocksToDeleteChan:      make(chan blocksToDelete, 25),
 		blocksToDeletePauseChan: make(chan (<-chan struct{})),
@@ -199,7 +199,7 @@ func (fbm *folderBlockManager) shutdown() {
 //
 //  ... = ...doBlockPuts(ctx, md, *bps)
 func (fbm *folderBlockManager) cleanUpBlockState(
-	md *RootMetadata, bps *blockPutState) {
+	md ConstRootMetadata, bps *blockPutState) {
 	fbm.log.CDebugf(nil, "Clean up md %d %s", md.Revision, md.MergedStatus())
 	toDelete := blocksToDelete{md: md}
 	for _, bs := range bps.blockStates {
@@ -244,7 +244,7 @@ func (fbm *folderBlockManager) enqueueBlocksToDeleteNoWait(toDelete blocksToDele
 	}
 }
 
-func (fbm *folderBlockManager) archiveUnrefBlocks(md *RootMetadata) {
+func (fbm *folderBlockManager) archiveUnrefBlocks(md ConstRootMetadata) {
 	// Don't archive for unmerged revisions, because conflict
 	// resolution might undo some of the unreferences.
 	if md.MergedStatus() != Merged {
@@ -259,7 +259,7 @@ func (fbm *folderBlockManager) archiveUnrefBlocks(md *RootMetadata) {
 // blocking.  By the time it returns, the archive group has been
 // incremented so future waits will block on this archive.  This
 // method is for internal use within folderBlockManager only.
-func (fbm *folderBlockManager) archiveUnrefBlocksNoWait(md *RootMetadata) {
+func (fbm *folderBlockManager) archiveUnrefBlocksNoWait(md ConstRootMetadata) {
 	// Don't archive for unmerged revisions, because conflict
 	// resolution might undo some of the unreferences.
 	if md.MergedStatus() != Merged {
@@ -305,7 +305,7 @@ func (fbm *folderBlockManager) forceQuotaReclamation() {
 // block server for the given block pointers.  For deletes, it returns
 // a list of block IDs that no longer have any references.
 func (fbm *folderBlockManager) doChunkedDowngrades(ctx context.Context,
-	md *RootMetadata, ptrs []BlockPointer, archive bool) (
+	md ConstRootMetadata, ptrs []BlockPointer, archive bool) (
 	[]BlockID, error) {
 	fbm.log.CDebugf(ctx, "Downgrading %d pointers (archive=%t)",
 		len(ptrs), archive)
@@ -389,7 +389,7 @@ func (fbm *folderBlockManager) doChunkedDowngrades(ctx context.Context,
 // for the given block pointers.  It returns a list of block IDs that
 // no longer have any references.
 func (fbm *folderBlockManager) deleteBlockRefs(ctx context.Context,
-	md *RootMetadata, ptrs []BlockPointer) ([]BlockID, error) {
+	md ConstRootMetadata, ptrs []BlockPointer) ([]BlockID, error) {
 	return fbm.doChunkedDowngrades(ctx, md, ptrs, false)
 }
 
@@ -428,7 +428,7 @@ func (fbm *folderBlockManager) processBlocksToDelete(ctx context.Context, toDele
 			rmds[0].Revision)
 		// Don't block on archiving the MD, because that could
 		// lead to deadlock.
-		fbm.archiveUnrefBlocksNoWait(rmds[0].RootMetadata)
+		fbm.archiveUnrefBlocksNoWait(rmds[0])
 		return nil
 	}
 
@@ -492,7 +492,7 @@ func (fbm *folderBlockManager) runUnlessShutdown(
 }
 
 func (fbm *folderBlockManager) archiveBlockRefs(ctx context.Context,
-	md *RootMetadata, ptrs []BlockPointer) error {
+	md ConstRootMetadata, ptrs []BlockPointer) error {
 	_, err := fbm.doChunkedDowngrades(ctx, md, ptrs, true)
 	return err
 }
@@ -585,7 +585,7 @@ func (fbm *folderBlockManager) deleteBlocksInBackground() {
 	}
 }
 
-func (fbm *folderBlockManager) isOldEnough(rmd *RootMetadata) bool {
+func (fbm *folderBlockManager) isOldEnough(rmd ConstRootMetadata) bool {
 	// Trust the client-provided timestamp -- it's
 	// possible that a writer with a bad clock could cause
 	// another writer to clear out quotas early.  That's
@@ -605,7 +605,7 @@ func (fbm *folderBlockManager) isOldEnough(rmd *RootMetadata) bool {
 // that's older than the unref age, as well as the latest revision
 // that was scrubbed by the previous gc op.
 func (fbm *folderBlockManager) getMostRecentOldEnoughAndGCRevisions(
-	ctx context.Context, head *RootMetadata) (
+	ctx context.Context, head ConstRootMetadata) (
 	mostRecentOldEnoughRev, lastGCRev MetadataRevision, err error) {
 	// Walk backwards until we find one that is old enough.  Also,
 	// look out for the previous gcOp.
@@ -629,7 +629,7 @@ func (fbm *folderBlockManager) getMostRecentOldEnoughAndGCRevisions(
 		for i := len(rmds) - 1; i >= 0; i-- {
 			rmd := rmds[i]
 			if mostRecentOldEnoughRev == MetadataRevisionUninitialized &&
-				fbm.isOldEnough(rmd.RootMetadata) {
+				fbm.isOldEnough(rmd) {
 				fbm.log.CDebugf(ctx, "Revision %d is older than the unref "+
 					"age %s", rmd.Revision,
 					fbm.config.QuotaReclamationMinUnrefAge())
@@ -791,8 +791,8 @@ func (fbm *folderBlockManager) finalizeReclamation(ctx context.Context,
 		func() error { return fbm.helper.finalizeGCOp(ctx, gco) })
 }
 
-func (fbm *folderBlockManager) isQRNecessary(head *RootMetadata) bool {
-	if head == nil {
+func (fbm *folderBlockManager) isQRNecessary(head ConstRootMetadata) bool {
+	if head == (ConstRootMetadata{}) {
 		return false
 	}
 
@@ -848,7 +848,7 @@ func (fbm *folderBlockManager) doReclamation(timer *time.Timer) (err error) {
 	var complete bool
 	defer func() {
 		// Remember the QR we just performed.
-		if err == nil && head != nil {
+		if err == nil && head != (ConstRootMetadata{}) {
 			fbm.lastQRHeadRev = head.Revision
 			fbm.lastQROldEnoughRev = mostRecentOldEnoughRev
 			fbm.wasLastQRComplete = complete

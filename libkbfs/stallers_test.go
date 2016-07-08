@@ -69,21 +69,21 @@ func (f *stallingBlockOps) maybeStall(ctx context.Context, opName string) {
 }
 
 func (f *stallingBlockOps) Get(
-	ctx context.Context, md *RootMetadata, blockPtr BlockPointer,
+	ctx context.Context, md ConstRootMetadata, blockPtr BlockPointer,
 	block Block) error {
 	f.maybeStall(ctx, "Get")
 	return f.delegate().Get(ctx, md, blockPtr, block)
 }
 
 func (f *stallingBlockOps) Ready(
-	ctx context.Context, md *RootMetadata, block Block) (
+	ctx context.Context, md ConstRootMetadata, block Block) (
 	id BlockID, plainSize int, readyBlockData ReadyBlockData, err error) {
 	f.maybeStall(ctx, "Ready")
 	return f.delegate().Ready(ctx, md, block)
 }
 
 func (f *stallingBlockOps) Put(
-	ctx context.Context, md *RootMetadata, blockPtr BlockPointer,
+	ctx context.Context, md ConstRootMetadata, blockPtr BlockPointer,
 	readyBlockData ReadyBlockData) error {
 	f.maybeStall(ctx, "Put")
 	select {
@@ -101,14 +101,14 @@ func (f *stallingBlockOps) Put(
 }
 
 func (f *stallingBlockOps) Delete(
-	ctx context.Context, md *RootMetadata,
+	ctx context.Context, md ConstRootMetadata,
 	ptrs []BlockPointer) (map[BlockID]int, error) {
 	f.maybeStall(ctx, "Delete")
 	return f.delegate().Delete(ctx, md, ptrs)
 }
 
 func (f *stallingBlockOps) Archive(
-	ctx context.Context, md *RootMetadata, ptrs []BlockPointer) error {
+	ctx context.Context, md ConstRootMetadata, ptrs []BlockPointer) error {
 	f.maybeStall(ctx, "Archive")
 	return f.delegate().Archive(ctx, md, ptrs)
 }
