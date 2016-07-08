@@ -366,7 +366,76 @@ func (s *mdServerTlfJournal) flushOne(
 
 	if rmd.MergedStatus() == Merged {
 		err = mdOps.Put(context.Background(), rmd)
-		if err != nil {
+		var fakeFBO *folderBranchOps
+		doUnmergedPut := fakeFBO.isRevisionConflict(err)
+		if doUnmergedPut {
+			earliestRevision, err := s.j.readEarliestRevision()
+			if err != nil {
+				return false, err
+			}
+
+			latestRevision, err := s.j.readLatestRevision()
+			if err != nil {
+				return false, err
+			}
+
+			start, allMdIDs, err := s.j.getRange(earliestRevision, latestRevision)
+			if err != nil {
+				return false, err
+			}
+
+			bid, err := s.crypto.MakeRandomBranchID()
+			if err != nil {
+				return false, err
+			}
+
+			// TODO: Do the below atomically.
+
+			for i, id := range allMdIDs {
+				rmd, err := s.getMDReadLocked(id)
+				if err != nil {
+					return false, err
+				}
+				rmd.WFlags |= MetadataFlagUnmerged
+				rmd.BID = bid
+
+				err = s.putMDLocked(rmd)
+				if err != nil {
+					return false, err
+				}
+
+				rev := start + MetadataRevision(i)
+				o, err := revisionToOrdinal(rev)
+				if err != nil {
+					return false, err
+				}
+
+				newID, err := rmd.MetadataID(s.crypto)
+				if err != nil {
+					return false, err
+				}
+
+				err = s.j.j.writeJournalEntry(o, newID)
+				if err != nil {
+					return false, err
+				}
+			}
+
+			earliestID, err := s.j.getEarliest()
+			if err != nil {
+				return false, err
+			}
+
+			rmd, err := s.getMDReadLocked(earliestID)
+			if err != nil {
+				return false, err
+			}
+
+			err = mdOps.PutUnmerged(context.Background(), rmd)
+			if err != nil {
+				return false, err
+			}
+		} else if err != nil {
 			return false, err
 		}
 	} else {
