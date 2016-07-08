@@ -419,9 +419,9 @@ func (s *mdServerTlfJournal) flushOne(
 	log.Debug("Flushing MD put id=%s, rev=%s", earliestID, rmd.Revision)
 
 	if rmd.MergedStatus() == Merged {
-		err = mdOps.Put(context.Background(), rmd)
+		cErr := mdOps.Put(context.Background(), rmd)
 		var fakeFBO *folderBranchOps
-		doUnmergedPut := fakeFBO.isRevisionConflict(err)
+		doUnmergedPut := fakeFBO.isRevisionConflict(cErr)
 		if doUnmergedPut {
 			earliestRevision, err := s.j.readEarliestRevision()
 			if err != nil {
@@ -434,7 +434,7 @@ func (s *mdServerTlfJournal) flushOne(
 			}
 
 			log.Debug("Conflict detected %v; rewriting MDs %s to %s",
-				err, earliestRevision, latestRevision)
+				cErr, earliestRevision, latestRevision)
 
 			_, allMdIDs, err := s.j.getRange(earliestRevision, latestRevision)
 			if err != nil {
@@ -509,8 +509,8 @@ func (s *mdServerTlfJournal) flushOne(
 			}
 
 			s.justBranched = true
-		} else if err != nil {
-			return false, err
+		} else if cErr != nil {
+			return false, cErr
 		}
 	} else {
 		err = mdOps.PutUnmerged(context.Background(), rmd)
