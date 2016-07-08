@@ -7,6 +7,7 @@
 package test
 
 import (
+	"os/exec"
 	"testing"
 	"time"
 )
@@ -1002,6 +1003,8 @@ func TestCrCreateFileEXCLOnStaged(t *testing.T) {
 
 // alice and bob both exclusively create the same file, but neither write to it.
 func TestCrBothCreateFileEXCL(t *testing.T) {
+	output, err := exec.Command("git", "show").CombinedOutput()
+	t.Logf("err: %v;\noutput: %s", err, string(output))
 	test(t,
 		users("alice", "bob"),
 		as(alice,
