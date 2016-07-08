@@ -15,7 +15,7 @@ import (
 
 type tlfJournalBundle struct {
 	bJournal  *bserverTlfJournal
-	mdStorage *mdServerTlfStorage
+	mdJournal *mdServerTlfJournal
 }
 
 type JournalServer struct {
@@ -63,8 +63,8 @@ func (j *JournalServer) EnableJournaling(tlfID TlfID) (err error) {
 	if err != nil {
 		return err
 	}
-	mdStorage := makeMDServerTlfStorage(j.codec, j.crypto, path)
-	j.tlfBundles[tlfID] = &tlfJournalBundle{bJournal, mdStorage}
+	mdJournal := makeMDServerTlfJournal(j.codec, j.crypto, path)
+	j.tlfBundles[tlfID] = &tlfJournalBundle{bJournal, mdJournal}
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 
 	flushedMDEntries := 0
 	for {
-		flushed, err := bundle.mdStorage.flushOne(
+		flushed, err := bundle.mdJournal.flushOne(
 			j.delegateMDOps, j.log)
 		if err != nil {
 			return err
@@ -182,7 +182,7 @@ type journalMDOps struct {
 	MDOps
 }
 
-func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, storage *mdServerTlfStorage) error {
+func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, journal *mdServerTlfJournal) error {
 	if rmd.BID != NullBranchID {
 		panic("Branches not supported yet")
 	}
@@ -197,19 +197,9 @@ func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, storage *mdSer
 		return MDServerError{err}
 	}
 
-	var rmds RootMetadataSigned
-	err = rmd.deepCopyInPlace(j.jServer.codec, false, &rmds.MD)
-	if err != nil {
-		return MDServerError{err}
-	}
-
-	recordBranchID, err := storage.put(currentUID, key.kid, &rmds)
+	err = journal.put(currentUID, key.kid, rmd)
 	if err != nil {
 		return err
-	}
-
-	if recordBranchID {
-		// TODO: Do something with branch ID.
 	}
 
 	return nil
@@ -222,7 +212,7 @@ func (j journalMDOps) Put(ctx context.Context, rmd *RootMetadata) error {
 
 	bundle, ok := j.jServer.getBundle(rmd.ID)
 	if ok {
-		return j.put(ctx, rmd, bundle.mdStorage)
+		return j.put(ctx, rmd, bundle.mdJournal)
 	}
 
 	return j.MDOps.Put(ctx, rmd)
@@ -240,7 +230,7 @@ func (j journalMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata) error 
 			rmd.BID = bid
 		}
 
-		return j.put(ctx, rmd, bundle.mdStorage)
+		return j.put(ctx, rmd, bundle.mdJournal)
 	}
 
 	return j.MDOps.PutUnmerged(ctx, rmd)
