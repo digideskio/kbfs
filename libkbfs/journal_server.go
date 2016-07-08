@@ -228,16 +228,22 @@ func (j journalMDOps) Put(ctx context.Context, rmd *RootMetadata) error {
 	return j.MDOps.Put(ctx, rmd)
 }
 
-func (j journalMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata, bid BranchID) error {
+func (j journalMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata) error {
 	bundle, ok := j.jServer.getBundle(rmd.ID)
 	if ok {
 		rmd.WFlags |= MetadataFlagUnmerged
-		rmd.BID = bid
+		if rmd.BID == NullBranchID {
+			bid, err := j.jServer.crypto.MakeRandomBranchID()
+			if err != nil {
+				return err
+			}
+			rmd.BID = bid
+		}
 
 		return j.put(ctx, rmd, bundle.mdStorage)
 	}
 
-	return j.MDOps.PutUnmerged(ctx, rmd, bid)
+	return j.MDOps.PutUnmerged(ctx, rmd)
 }
 
 func (j *JournalServer) blockServer() journalBlockServer {

@@ -192,15 +192,14 @@ func (m *stallingMDOps) Put(ctx context.Context, md *RootMetadata) error {
 	}
 }
 
-func (m *stallingMDOps) PutUnmerged(ctx context.Context, md *RootMetadata,
-	bid BranchID) error {
+func (m *stallingMDOps) PutUnmerged(ctx context.Context, md *RootMetadata) error {
 	m.maybeStall(ctx, "PutUnmerged")
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
-	err := m.delegate.PutUnmerged(ctx, md, bid)
+	err := m.delegate.PutUnmerged(ctx, md)
 	// If the PutUnmerged was canceled, return the cancel error.  This
 	// emulates the PutUnmerged being canceled while the RPC is
 	// outstanding.

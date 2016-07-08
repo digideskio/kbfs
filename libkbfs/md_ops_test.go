@@ -680,7 +680,7 @@ func TestMDOpsPutPrivateSuccess(t *testing.T) {
 	rmds := newRMDS(t, config, false)
 	putMDForPrivate(config, rmds)
 
-	if err := config.MDOps().PutUnmerged(ctx, &rmds.MD, NullBranchID); err != nil {
+	if err := config.MDOps().Put(ctx, &rmds.MD); err != nil {
 		t.Errorf("Got error on put: %v", err)
 	}
 }

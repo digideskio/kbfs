@@ -4,15 +4,14 @@
 package libkbfs
 
 import (
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
 	libkb "github.com/keybase/client/go/libkb"
 	logger "github.com/keybase/client/go/logger"
 	protocol "github.com/keybase/client/go/protocol"
 	go_metrics "github.com/rcrowley/go-metrics"
 	context "golang.org/x/net/context"
+	reflect "reflect"
+	time "time"
 )
 
 // Mock of AuthTokenRefreshHandler interface
@@ -2095,14 +2094,14 @@ func (_mr *_MockMDOpsRecorder) Put(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Put", arg0, arg1)
 }
 
-func (_m *MockMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata, bid BranchID) error {
-	ret := _m.ctrl.Call(_m, "PutUnmerged", ctx, rmd, bid)
+func (_m *MockMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata) error {
+	ret := _m.ctrl.Call(_m, "PutUnmerged", ctx, rmd)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-func (_mr *_MockMDOpsRecorder) PutUnmerged(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "PutUnmerged", arg0, arg1, arg2)
+func (_mr *_MockMDOpsRecorder) PutUnmerged(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "PutUnmerged", arg0, arg1)
 }
 
 func (_m *MockMDOps) GetLatestHandleForTLF(ctx context.Context, id TlfID) (BareTlfHandle, error) {
@@ -3567,6 +3566,14 @@ func (_m *MockConfig) DoBackgroundFlushes() bool {
 
 func (_mr *_MockConfigRecorder) DoBackgroundFlushes() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "DoBackgroundFlushes")
+}
+
+func (_m *MockConfig) SetDoBackgroundFlushes(_param0 bool) {
+	_m.ctrl.Call(_m, "SetDoBackgroundFlushes", _param0)
+}
+
+func (_mr *_MockConfigRecorder) SetDoBackgroundFlushes(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetDoBackgroundFlushes", arg0)
 }
 
 func (_m *MockConfig) RekeyWithPromptWaitTime() time.Duration {

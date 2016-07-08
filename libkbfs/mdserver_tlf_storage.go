@@ -429,7 +429,7 @@ func (s *mdServerTlfStorage) flushOne(
 			return false, err
 		}
 	} else {
-		err = mdOps.PutUnmerged(context.Background(), &rmd.MD, rmd.MD.BID)
+		err = mdOps.PutUnmerged(context.Background(), &rmd.MD)
 		if err != nil {
 			return false, err
 		}
