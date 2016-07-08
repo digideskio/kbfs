@@ -395,7 +395,7 @@ func (s *mdServerTlfStorage) put(
 }
 
 func (s *mdServerTlfStorage) flushOne(
-	mdServer MDServer, log logger.Logger) (bool, error) {
+	mdOps MDOps, log logger.Logger) (bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -423,9 +423,16 @@ func (s *mdServerTlfStorage) flushOne(
 
 	log.Debug("Flushing MD put id=%s, rev=%s", earliestID, rmd.MD.Revision)
 
-	err = mdServer.Put(context.Background(), rmd)
-	if err != nil {
-		return false, err
+	if rmd.MD.MergedStatus() == Merged {
+		err = mdOps.Put(context.Background(), &rmd.MD)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		err = mdOps.PutUnmerged(context.Background(), &rmd.MD, rmd.MD.BID)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	err = j.removeEarliest()

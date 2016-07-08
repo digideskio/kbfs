@@ -369,9 +369,9 @@ func Init(ctx Context, params InitParams, keybaseDaemonFn KeybaseDaemonFn, onInt
 			config.KBPKI(), log,
 			// TODO: Figure out the right path to use.
 			"/tmp/kbfs_journal",
-			config.BlockServer(), config.MDServer())
+			config.BlockServer(), config.MDOps())
 		config.SetBlockServer(jServer.blockServer())
-		config.SetMDServer(jServer.mdServer())
+		config.SetMDOps(jServer.mdOps())
 	}
 
 	return config, nil

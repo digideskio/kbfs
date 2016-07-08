@@ -28,7 +28,7 @@ type JournalServer struct {
 	deferLog logger.Logger
 
 	delegateBlockServer BlockServer
-	delegateMDServer    MDServer
+	delegateMDOps       MDOps
 
 	lock       sync.RWMutex
 	tlfBundles map[TlfID]*tlfJournalBundle
@@ -96,7 +96,7 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 	flushedMDEntries := 0
 	for {
 		flushed, err := bundle.mdStorage.flushOne(
-			j.delegateMDServer, j.log)
+			j.delegateMDOps, j.log)
 		if err != nil {
 			return err
 		}
@@ -177,54 +177,80 @@ func (j journalBlockServer) ArchiveBlockReferences(
 	return j.BlockServer.ArchiveBlockReferences(ctx, tlfID, contexts)
 }
 
-type journalMDServer struct {
+type journalMDOps struct {
 	jServer *JournalServer
-	MDServer
+	MDOps
 }
 
-func (j journalMDServer) Put(ctx context.Context, rmds *RootMetadataSigned) error {
-	bundle, ok := j.jServer.getBundle(rmds.MD.ID)
-	if ok {
-		if rmds.MD.BID != NullBranchID {
-			panic("Branches not supported yet")
-		}
-
-		_, currentUID, err := j.jServer.kbpki.GetCurrentUserInfo(ctx)
-		if err != nil {
-			return MDServerError{err}
-		}
-
-		key, err := j.jServer.kbpki.GetCurrentCryptPublicKey(ctx)
-		if err != nil {
-			return MDServerError{err}
-		}
-
-		recordBranchID, err := bundle.mdStorage.put(currentUID, key.kid, rmds)
-		if err != nil {
-			return err
-		}
-
-		if recordBranchID {
-			// TODO: Do something with branch ID.
-		}
-
-		return nil
+func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, storage *mdServerTlfStorage) error {
+	if rmd.BID != NullBranchID {
+		panic("Branches not supported yet")
 	}
 
-	return j.MDServer.Put(ctx, rmds)
+	_, currentUID, err := j.jServer.kbpki.GetCurrentUserInfo(ctx)
+	if err != nil {
+		return MDServerError{err}
+	}
+
+	key, err := j.jServer.kbpki.GetCurrentCryptPublicKey(ctx)
+	if err != nil {
+		return MDServerError{err}
+	}
+
+	var rmds RootMetadataSigned
+	err = rmd.deepCopyInPlace(j.jServer.codec, false, &rmds.MD)
+	if err != nil {
+		return MDServerError{err}
+	}
+
+	recordBranchID, err := storage.put(currentUID, key.kid, &rmds)
+	if err != nil {
+		return err
+	}
+
+	if recordBranchID {
+		// TODO: Do something with branch ID.
+	}
+
+	return nil
+}
+
+func (j journalMDOps) Put(ctx context.Context, rmd *RootMetadata) error {
+	if rmd.MergedStatus() == Unmerged {
+		return UnexpectedUnmergedPutError{}
+	}
+
+	bundle, ok := j.jServer.getBundle(rmd.ID)
+	if ok {
+		return j.put(ctx, rmd, bundle.mdStorage)
+	}
+
+	return j.MDOps.Put(ctx, rmd)
+}
+
+func (j journalMDOps) PutUnmerged(ctx context.Context, rmd *RootMetadata, bid BranchID) error {
+	bundle, ok := j.jServer.getBundle(rmd.ID)
+	if ok {
+		rmd.WFlags |= MetadataFlagUnmerged
+		rmd.BID = bid
+
+		return j.put(ctx, rmd, bundle.mdStorage)
+	}
+
+	return j.MDOps.PutUnmerged(ctx, rmd, bid)
 }
 
 func (j *JournalServer) blockServer() journalBlockServer {
 	return journalBlockServer{j, j.delegateBlockServer}
 }
 
-func (j *JournalServer) mdServer() journalMDServer {
-	return journalMDServer{j, j.delegateMDServer}
+func (j *JournalServer) mdOps() journalMDOps {
+	return journalMDOps{j, j.delegateMDOps}
 }
 
 func makeJournalServer(
 	codec Codec, crypto cryptoPure, kbpki KBPKI, log logger.Logger,
-	dir string, bserver BlockServer, mdServer MDServer) *JournalServer {
+	dir string, bserver BlockServer, mdOps MDOps) *JournalServer {
 	jServer := JournalServer{
 		codec:               codec,
 		crypto:              crypto,
@@ -233,7 +259,7 @@ func makeJournalServer(
 		deferLog:            log.CloneWithAddedDepth(1),
 		dir:                 dir,
 		delegateBlockServer: bserver,
-		delegateMDServer:    mdServer,
+		delegateMDOps:       mdOps,
 		tlfBundles:          make(map[TlfID]*tlfJournalBundle),
 	}
 	return &jServer
