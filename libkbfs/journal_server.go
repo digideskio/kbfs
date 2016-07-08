@@ -183,10 +183,6 @@ type journalMDOps struct {
 }
 
 func (j journalMDOps) put(ctx context.Context, rmd *RootMetadata, journal *mdServerTlfJournal) error {
-	if rmd.BID != NullBranchID {
-		panic("Branches not supported yet")
-	}
-
 	_, currentUID, err := j.jServer.kbpki.GetCurrentUserInfo(ctx)
 	if err != nil {
 		return MDServerError{err}
