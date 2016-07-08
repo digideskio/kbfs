@@ -420,7 +420,17 @@ func (s *mdServerTlfJournal) flushOne(
 		return false, err
 	}
 
+	h, err := rmd.MakeBareTlfHandle()
+	if err != nil {
+		return false, err
+	}
+
 	ctx := context.Background()
+	rmd.tlfHandle, err = MakeTlfHandle(ctx, h, s.config.KBPKI())
+	if err != nil {
+		return false, err
+	}
+
 	err = decryptMDPrivateData(ctx, s.config, rmd, rmd)
 	if err != nil {
 		return false, err
