@@ -354,11 +354,13 @@ func (s *mdServerTlfJournal) put(
 			// head may be nil if the journal is fully
 			// flushed.
 			rmd.BID = s.justBranchedID
-			headID, err := head.MetadataID(s.crypto)
-			if err != nil {
-				return MDServerError{err}
+			if head != nil {
+				headID, err := head.MetadataID(s.crypto)
+				if err != nil {
+					return MDServerError{err}
+				}
+				rmd.PrevRoot = headID
 			}
-			rmd.PrevRoot = headID
 			s.justBranchedID = NullBranchID
 		} else if head != nil && head.MergedStatus() != Merged {
 			// Conflict resolution shouldn't happen.
