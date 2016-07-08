@@ -45,6 +45,7 @@ import (
 // characters of the name to keep the number of directories in dir
 // itself to a manageable number, similar to git.
 type mdServerTlfJournal struct {
+	config Config
 	codec  Codec
 	crypto cryptoPure
 	dir    string
@@ -60,13 +61,13 @@ type mdServerTlfJournal struct {
 	justBranched bool
 }
 
-func makeMDServerTlfJournal(
-	codec Codec, crypto cryptoPure, dir string) *mdServerTlfJournal {
+func makeMDServerTlfJournal(config Config, dir string) *mdServerTlfJournal {
 	journal := &mdServerTlfJournal{
-		codec:  codec,
-		crypto: crypto,
+		config: config,
+		codec:  config.Codec(),
+		crypto: config.Crypto(),
 		dir:    dir,
-		j:      makeMDServerBranchJournal(codec, dir),
+		j:      makeMDServerBranchJournal(config.Codec(), dir),
 	}
 	return journal
 }
@@ -120,7 +121,55 @@ func (s *mdServerTlfJournal) getMDReadLocked(id MdID) (*RootMetadata, error) {
 	return &rmd, nil
 }
 
-func (s *mdServerTlfJournal) putMDLocked(rmd *RootMetadata) error {
+func (s *mdServerTlfJournal) putMDLocked(rmd *RootMetadata, me keybase1.UID) error {
+	codec := s.codec
+	crypto := s.config.Crypto()
+	ctx := context.Background()
+
+	if rmd.ID.IsPublic() || !rmd.IsWriterMetadataCopiedSet() {
+		// Record the last writer to modify this writer metadata
+		rmd.LastModifyingWriter = me
+
+		if rmd.ID.IsPublic() {
+			// Encode the private metadata
+			encodedPrivateMetadata, err := codec.Encode(rmd.data)
+			if err != nil {
+				return err
+			}
+			rmd.SerializedPrivateMetadata = encodedPrivateMetadata
+		} else if !rmd.IsWriterMetadataCopiedSet() {
+			// Encrypt and encode the private metadata
+			k, err := s.config.KeyManager().GetTLFCryptKeyForEncryption(ctx, rmd)
+			if err != nil {
+				return err
+			}
+			encryptedPrivateMetadata, err := crypto.EncryptPrivateMetadata(&rmd.data, k)
+			if err != nil {
+				return err
+			}
+			encodedEncryptedPrivateMetadata, err := codec.Encode(encryptedPrivateMetadata)
+			if err != nil {
+				return err
+			}
+			rmd.SerializedPrivateMetadata = encodedEncryptedPrivateMetadata
+		}
+
+		// Sign the writer metadata
+		buf, err := codec.Encode(rmd.WriterMetadata)
+		if err != nil {
+			return err
+		}
+
+		sigInfo, err := crypto.Sign(ctx, buf)
+		if err != nil {
+			return err
+		}
+		rmd.WriterMetadataSigInfo = sigInfo
+	}
+
+	// Record the last user to modify this metadata
+	rmd.LastModifyingUser = me
+
 	id, err := rmd.MetadataID(s.crypto)
 	if err != nil {
 		return err
@@ -325,7 +374,7 @@ func (s *mdServerTlfJournal) put(
 		}
 	}
 
-	err = s.putMDLocked(rmd)
+	err = s.putMDLocked(rmd, currentUID)
 	if err != nil {
 		return MDServerError{err}
 	}
@@ -344,7 +393,7 @@ func (s *mdServerTlfJournal) put(
 }
 
 func (s *mdServerTlfJournal) flushOne(
-	mdOps MDOps, log logger.Logger) (bool, error) {
+	currentUID keybase1.UID, mdOps MDOps, log logger.Logger) (bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -407,7 +456,7 @@ func (s *mdServerTlfJournal) flushOne(
 				rmd.WFlags |= MetadataFlagUnmerged
 				rmd.BID = bid
 
-				err = s.putMDLocked(rmd)
+				err = s.putMDLocked(rmd, currentUID)
 				if err != nil {
 					return false, err
 				}

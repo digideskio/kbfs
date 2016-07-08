@@ -19,6 +19,7 @@ type tlfJournalBundle struct {
 }
 
 type JournalServer struct {
+	config Config
 	codec  Codec
 	crypto cryptoPure
 	dir    string
@@ -63,7 +64,7 @@ func (j *JournalServer) EnableJournaling(tlfID TlfID) (err error) {
 	if err != nil {
 		return err
 	}
-	mdJournal := makeMDServerTlfJournal(j.codec, j.crypto, path)
+	mdJournal := makeMDServerTlfJournal(j.config, path)
 	j.tlfBundles[tlfID] = &tlfJournalBundle{bJournal, mdJournal}
 	return nil
 }
@@ -95,8 +96,14 @@ func (j *JournalServer) Flush(tlfID TlfID) (err error) {
 
 	flushedMDEntries := 0
 	for {
+		ctx := context.Background()
+		_, currentUID, err := j.kbpki.GetCurrentUserInfo(ctx)
+		if err != nil {
+			return err
+		}
+
 		flushed, err := bundle.mdJournal.flushOne(
-			j.delegateMDOps, j.log)
+			currentUID, j.delegateMDOps, j.log)
 		if err != nil {
 			return err
 		}
@@ -236,12 +243,13 @@ func (j *JournalServer) mdOps() journalMDOps {
 }
 
 func makeJournalServer(
-	codec Codec, crypto cryptoPure, kbpki KBPKI, log logger.Logger,
+	config Config, log logger.Logger,
 	dir string, bserver BlockServer, mdOps MDOps) *JournalServer {
 	jServer := JournalServer{
-		codec:               codec,
-		crypto:              crypto,
-		kbpki:               kbpki,
+		config:              config,
+		codec:               config.Codec(),
+		crypto:              config.Crypto(),
+		kbpki:               config.KBPKI(),
 		log:                 log,
 		deferLog:            log.CloneWithAddedDepth(1),
 		dir:                 dir,

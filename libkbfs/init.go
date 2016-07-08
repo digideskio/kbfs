@@ -365,8 +365,7 @@ func Init(ctx Context, params InitParams, keybaseDaemonFn KeybaseDaemonFn, onInt
 	if params.WriteJournaling {
 		log := config.MakeLogger("")
 		jServer := makeJournalServer(
-			config.Codec(), config.Crypto(),
-			config.KBPKI(), log,
+			config, log,
 			// TODO: Figure out the right path to use.
 			"/tmp/kbfs_journal",
 			config.BlockServer(), config.MDOps())
