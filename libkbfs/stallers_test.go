@@ -131,19 +131,19 @@ func (m *stallingMDOps) maybeStall(ctx context.Context, opName string) {
 }
 
 func (m *stallingMDOps) GetForHandle(ctx context.Context, handle *TlfHandle) (
-	TlfID, ConstRootMetadata, error) {
+	TlfID, ImmutableRootMetadata, error) {
 	m.maybeStall(ctx, "GetForHandle")
 	return m.delegate.GetForHandle(ctx, handle)
 }
 
 func (m *stallingMDOps) GetUnmergedForHandle(ctx context.Context,
-	handle *TlfHandle) (ConstRootMetadata, error) {
+	handle *TlfHandle) (ImmutableRootMetadata, error) {
 	m.maybeStall(ctx, "GetUnmergedForHandle")
 	return m.delegate.GetUnmergedForHandle(ctx, handle)
 }
 
 func (m *stallingMDOps) GetForTLF(ctx context.Context, id TlfID) (
-	ConstRootMetadata, error) {
+	ImmutableRootMetadata, error) {
 	m.maybeStall(ctx, "GetForTLF")
 	return m.delegate.GetForTLF(ctx, id)
 }
@@ -155,20 +155,20 @@ func (m *stallingMDOps) GetLatestHandleForTLF(ctx context.Context, id TlfID) (
 }
 
 func (m *stallingMDOps) GetUnmergedForTLF(ctx context.Context, id TlfID,
-	bid BranchID) (ConstRootMetadata, error) {
+	bid BranchID) (ImmutableRootMetadata, error) {
 	m.maybeStall(ctx, "GetUnmergedForTLF")
 	return m.delegate.GetUnmergedForTLF(ctx, id, bid)
 }
 
 func (m *stallingMDOps) GetRange(ctx context.Context, id TlfID,
 	start, stop MetadataRevision) (
-	[]ConstRootMetadata, error) {
+	[]ImmutableRootMetadata, error) {
 	m.maybeStall(ctx, "GetRange")
 	return m.delegate.GetRange(ctx, id, start, stop)
 }
 
 func (m *stallingMDOps) GetUnmergedRange(ctx context.Context, id TlfID,
-	bid BranchID, start, stop MetadataRevision) ([]ConstRootMetadata, error) {
+	bid BranchID, start, stop MetadataRevision) ([]ImmutableRootMetadata, error) {
 	m.maybeStall(ctx, "GetUnmergedRange")
 	return m.delegate.GetUnmergedRange(ctx, id, bid, start, stop)
 }
