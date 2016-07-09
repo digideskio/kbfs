@@ -261,13 +261,10 @@ func injectNewRMD(t *testing.T, config *ConfigMock) (
 			EncodedSize: 1,
 		},
 	}
-	// Need to do this to avoid multiple calls to the mocked-out
-	// MakeMdID above, leading to confusion.
-	rmd.mdID = fakeMdID(fakeTlfIDByte(id))
 	FakeInitialRekey(&rmd.BareRootMetadata, h.ToBareHandleOrBust())
 
 	ops := getOps(config, id)
-	ops.head = MakeImmutableRootMetadata(rmd, rmd.mdID)
+	ops.head = MakeImmutableRootMetadata(rmd, fakeMdID(fakeTlfIDByte(id)))
 	rmd.SerializedPrivateMetadata = make([]byte, 1)
 	config.Notifier().RegisterForChanges(
 		[]FolderBranch{{id, MasterBranch}}, config.observer)
