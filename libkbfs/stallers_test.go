@@ -131,7 +131,7 @@ func (m *stallingMDOps) maybeStall(ctx context.Context, opName string) {
 }
 
 func (m *stallingMDOps) GetForHandle(ctx context.Context, handle *TlfHandle) (
-	ConstRootMetadata, error) {
+	TlfID, ConstRootMetadata, error) {
 	m.maybeStall(ctx, "GetForHandle")
 	return m.delegate.GetForHandle(ctx, handle)
 }
