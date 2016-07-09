@@ -521,14 +521,6 @@ type RootMetadata struct {
 	mdID     MdID
 }
 
-type ConstRootMetadata struct {
-	*RootMetadata
-}
-
-func MakeConstRootMetadata(rmd *RootMetadata) ConstRootMetadata {
-	return ConstRootMetadata{rmd}
-}
-
 // Data returns the private metadata of this RootMetadata.
 func (md *RootMetadata) Data() *PrivateMetadata {
 	return &md.data
@@ -895,6 +887,14 @@ func (md *RootMetadata) swapCachedBlockChanges() {
 	}
 }
 
+type ConstRootMetadata struct {
+	*RootMetadata
+}
+
+func MakeConstRootMetadata(rmd *RootMetadata) ConstRootMetadata {
+	return ConstRootMetadata{rmd}
+}
+
 // RootMetadataSigned is the top-level MD object stored in MD server
 type RootMetadataSigned struct {
 	// signature over the root metadata by the private signing key
@@ -1011,4 +1011,13 @@ func makeRekeyReadError(
 		return NeedSelfRekeyError{tlfName}
 	}
 	return NeedOtherRekeyError{tlfName}
+}
+
+type ImmutableRootMetadata struct {
+	ConstRootMetadata
+	mdID MdID
+}
+
+func MakeImmutableRootMetadata(rmd *RootMetadata, mdID MdID) ImmutableRootMetadata {
+	return ImmutableRootMetadata{ConstRootMetadata{rmd}, mdID}
 }
