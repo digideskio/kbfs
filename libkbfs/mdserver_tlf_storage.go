@@ -362,14 +362,14 @@ func (s *mdServerTlfStorage) put(
 		recordBranchID = true
 	}
 
-	id, err := s.crypto.MakeMdID(&rmds.MD)
-	if err != nil {
-		return false, MDServerError{err}
-	}
-
 	// Consistency checks
 	if head != nil {
-		err := head.MD.CheckValidSuccessorForServer(id, &rmds.MD)
+		headID, err := s.crypto.MakeMdID(&head.MD)
+		if err != nil {
+			return false, MDServerError{err}
+		}
+
+		err = head.MD.CheckValidSuccessorForServer(headID, &rmds.MD)
 		if err != nil {
 			return false, err
 		}
@@ -383,6 +383,11 @@ func (s *mdServerTlfStorage) put(
 	j, err := s.getOrCreateBranchJournalLocked(bid)
 	if err != nil {
 		return false, err
+	}
+
+	id, err := s.crypto.MakeMdID(&rmds.MD)
+	if err != nil {
+		return false, MDServerError{err}
 	}
 
 	err = j.append(rmds.MD.Revision, id)
