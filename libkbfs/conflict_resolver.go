@@ -2239,7 +2239,7 @@ func (cr *ConflictResolver) createResolvedMD(ctx context.Context,
 				newCreateOp.Dir, err = makeBlockUpdate(
 					chain.mostRecent, chain.mostRecent)
 				if err != nil {
-					return ConstRootMetadata{}, err
+					return nil, err
 				}
 				chain.ops[i] = &newCreateOp
 				if !added {
