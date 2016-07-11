@@ -389,7 +389,8 @@ func getEXCLFromOpenContext(oc *openContext) libkbfs.EXCL {
 }
 
 func (d *Dir) create(ctx context.Context, oc *openContext, name string) (f dokan.File, isDir bool, err error) {
-	d.folder.fs.log.CDebugf(ctx, "Dir Create %s", name)
+	d.folder.fs.log.CDebugf(ctx, "Dir Create %s with openContext: %#v, %#v",
+		name, oc, oc.CreateData)
 	defer func() { d.folder.reportErr(ctx, libkbfs.WriteMode, err, nil) }()
 
 	isExec := false // Windows lacks executable modes.
