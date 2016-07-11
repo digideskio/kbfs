@@ -1315,8 +1315,8 @@ func (fbo *folderBlockOps) writeDataLocked(
 			de.EncodedSize = 0
 			// update the file info
 			de.Size += uint64(len(block.Contents) - oldLen)
-			fbo.deCache[file.tailPointer().ref()] = de
 		}
+		fbo.deCache[file.tailPointer().ref()] = de
 
 		// Calculate the amount of bytes we've newly-dirtied as part
 		// of this write.
